@@ -1,0 +1,20 @@
+# 秘密の情報（パスワード・APIキーなど）を置くファイルは GitHub に載せない
+.env
+.env.*
+!.env.example
+
+# 鍵ファイル
+*.pem
+*.key
+
+# 依存・ビルドの生成物
+node_modules/
+dist/
+build/
+.gradle/
+
+# エディタ・OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
