@@ -20,8 +20,36 @@
   button.danger { color:var(--red); border-color:#e3b5b1; }
   button.danger:hover { background:#fdecea; border-color:var(--red); }
   .datebar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
-  .datebar .label { font-weight:bold; font-size:18px; margin:0 4px 0 8px; }
-  .clock { background:#eef3fa; color:var(--blue); border-radius:999px; padding:3px 12px; font-size:14px; font-weight:bold; }
+  .datebar .label { font-weight:bold; font-size:18px; display:inline-block; min-width:182px; }   /* 日付が変わっても右の時刻の位置がずれない */
+  .datepick { position:relative; display:inline-flex; align-items:center; gap:8px; margin:0 4px 0 8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
+  .datepick:hover { background:#f3f5f7; border-color:var(--blue); }
+  .datewrap { position:relative; }
+  #cal { position:absolute; top:calc(100% + 6px); left:8px; z-index:25; width:320px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; box-shadow:0 8px 28px rgba(0,0,0,.25); }
+  #cal[hidden] { display:none; }
+  .cal-head { display:flex; align-items:center; gap:4px; margin-bottom:8px; }
+  .cal-head button { height:30px; display:inline-flex; align-items:center; justify-content:center; padding:0 10px; line-height:1; }
+  .cal-title { padding:0 4px; font-weight:bold; white-space:nowrap; line-height:30px; }
+  .cal-head .spacer { flex:1; }
+  .cal-head .cal-x { width:30px; padding:0; border:none; background:none; font-size:22px; color:var(--sub); }
+  .cal-head .cal-x:hover { color:var(--red); background:none; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+  .cal-grid .dow { display:flex; align-items:center; justify-content:center; height:24px; font-size:12px; color:var(--sub); }
+  .cal-grid .sun { color:var(--red); } .cal-grid .sat { color:var(--blue); }
+  .day { position:relative; display:flex; align-items:center; justify-content:center; height:36px; border:1px solid transparent; border-radius:6px; background:none; padding:0; font-size:14px; cursor:pointer; }
+  .day:hover { background:#e3eefb; }
+  .day.out { opacity:.4; }
+  .day.today { border-color:var(--blue); }
+  .day.sel, .day.sel:hover { background:var(--blue); color:#fff; opacity:1; }
+  .dots { position:absolute; left:0; right:0; bottom:3px; display:flex; justify-content:center; gap:3px; }
+  .dot { width:5px; height:5px; border-radius:50%; }
+  .dot.mine { background:var(--blue); }
+  .dot.other { background:#8b95a5; }
+  .day.sel .dot.mine { background:#fff; }
+  .day.sel .dot.other { background:rgba(255,255,255,.55); }
+  .cal-legend { margin-top:8px; font-size:12px; color:var(--sub); text-align:center; }
+  .cal-legend .dot { display:inline-block; margin:0 4px 0 10px; vertical-align:middle; }
+  .clock { display:inline-flex; align-items:center; gap:8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); font-size:18px; font-weight:bold; }
+  .clock[hidden] { display:none; }
   .datebar .spacer { flex:1; }
   .gridwrap { overflow-x:auto; position:relative; }
   table { border-collapse:collapse; table-layout:fixed; width:100%; min-width:960px; user-select:none; }
@@ -29,8 +57,9 @@
   th.room { width:150px; white-space:nowrap; text-align:left; padding:0 10px; background:#f3f5f7; border-color:var(--line); }
   th.hour { background:#f3f5f7; color:var(--sub); font-weight:normal; padding:0 6px; border-color:var(--line); }
   th.hour div { display:flex; justify-content:space-between; }
-  td.hr { border-left-color:var(--line); }
+  td.hr { border-left-color:#d6dbe2; }
   td.free { background:#fff; cursor:pointer; }
+  tr.alt td.free:not(:hover):not(.sel) { background:#f9fafb; }   /* 1 行おきに薄いグレー（右端まで目で追いやすく） */
   td.free:hover::after { content:"＋"; color:var(--blue); font-weight:bold; }
   td.free:hover { background:#e3eefb; }
   td.sel, td.sel:hover { background:#b9d5f5; }
@@ -45,25 +74,44 @@
   @keyframes flash { 0%,40% { box-shadow:inset 0 0 0 3px #ffd54a, 0 0 12px 2px #ffd54a; } 100% { box-shadow:none; } }
   #nowline { position:absolute; width:2px; background:var(--red); pointer-events:none; display:none; }
   #nowline::before { content:""; position:absolute; top:-4px; left:-4px; width:10px; height:10px; border-radius:50%; background:var(--red); }
-  .legend { font-size:13px; color:var(--sub); margin-top:10px; }
-  .legend span { display:inline-block; width:14px; height:14px; vertical-align:middle; border:1px solid var(--line); border-radius:3px; margin:0 5px 0 16px; }
-  .legend span:first-child { margin-left:0; }
+  .infobar { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:8px; }
+  .infobar .hint { margin:0; flex:1; white-space:nowrap; }
+  .legendwrap { position:relative; }
+  .help { width:28px; height:28px; padding:0; border-radius:50%; font-weight:bold; color:var(--blue); line-height:1; }
+  .legend { position:absolute; right:0; top:calc(100% + 6px); z-index:15; display:flex; flex-direction:column; gap:8px; padding:12px 16px; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.25); font-size:13px; color:var(--text); white-space:nowrap; }
+  .legend[hidden] { display:none; }
+  .legend .li { display:flex; align-items:center; }
+  .legend .li span { display:inline-block; width:16px; height:16px; border:1px solid var(--line); border-radius:3px; margin-right:8px; }
+  .lists { margin-top:14px; }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; border-bottom:1px solid var(--line); }
+  .tab { border:none; border-bottom:3px solid transparent; border-radius:0; background:none; padding:6px 14px; font-size:15px; color:var(--sub); }
+  .tab:hover { background:#f3f5f7; }
+  .tab.on { color:var(--blue); font-weight:bold; border-bottom-color:var(--blue); }
+  .list[hidden] { display:none; }
   .hint { font-size:13px; color:var(--sub); margin:0 0 8px; }
-  .loginbar { display:flex; align-items:center; gap:8px; margin:16px 0 10px; color:var(--sub); font-size:14px; }
-  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
-  .rcard { border:1px solid var(--line); border-left:5px solid var(--other); border-radius:8px; padding:8px 12px; margin-bottom:8px; background:#fff; transition:box-shadow .12s, background .12s; }
+  header.top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  header.top h1 { margin:0; }
+  .loginbar { display:flex; align-items:center; gap:8px; color:var(--sub); font-size:14px; }
+  .cols { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+  .list { max-height:340px; overflow-y:auto; padding-right:2px; }
+  .rcard { display:flex; align-items:center; gap:10px; min-height:30px; border:1px solid var(--line); border-left:5px solid var(--other); border-radius:6px; padding:3px 10px; margin-bottom:5px; background:#fff; font-size:13px; transition:box-shadow .12s, background .12s; }
   .rcard:last-child { margin-bottom:0; }
   .rcard.mine { border-left-color:var(--blue); background:#f2f7fd; }
   .rcard:hover { box-shadow:0 2px 8px rgba(0,0,0,.18); background:#fffbe8; }
+  .rcard.hl { box-shadow:0 2px 8px rgba(0,0,0,.18); background:#fffbe8; border-color:#e0b100; }   /* 表の枠にカーソルを重ねたとき */
+  #day .rcard { cursor:pointer; }
   .rcard.jump { cursor:pointer; }
   .rcard.done { opacity:.55; }
-  .rcard .rtime { font-weight:bold; }
-  .rcard .rsub { color:var(--sub); font-size:13px; margin-top:2px; }
-  .rcard .btns { display:flex; gap:8px; margin-top:6px; }
-  .rcard .btns button { padding:3px 10px; font-size:13px; }
+  .rcard .rtime { font-weight:bold; white-space:nowrap; }
+  .rcard .rsub { flex:1; min-width:0; color:var(--sub); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .rcard .btns { display:flex; gap:6px; }
+  .rcard .btns button { padding:1px 8px; font-size:12px; }
+  .vline { position:absolute; top:0; pointer-events:none; z-index:1; }
+  .vline.h { width:2px; background:rgba(45,55,72,.11); margin-left:-1px; }
+  .vline.m { width:1px; background:rgba(45,55,72,.05); }
   .tag { display:inline-block; margin-left:8px; padding:0 8px; border-radius:999px; background:var(--blue); color:#fff; font-size:11px; font-weight:normal; vertical-align:1px; }
   td.hl { outline:4px solid #ffb300; outline-offset:-4px; position:relative; z-index:2; }
-  .clock.away { background:#fff1cc; color:#7a4b00; }
+  .clock.away { background:#fff1cc; border-color:#e6c46a; color:#7a4b00; }
   .empty { color:var(--sub); padding:6px 0; }
   .err { color:var(--red); background:#fdecea; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:14px; }
   .err:empty { display:none; }
@@ -85,39 +133,44 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>会議室予約</h1>
+  <header class="top"><h1>会議室予約</h1><label class="loginbar">ログイン中（仮）<select id="who"></select></label></header>
 
   <section class="card">
     <div class="datebar">
       <button id="prev" aria-label="前の日">◀</button>
       <button id="today">今日</button>
       <button id="next" aria-label="次の日">▶</button>
-      <span class="label" id="dateLabel"></span>
+      <div class="datewrap">
+        <button type="button" class="datepick" id="dateBtn" title="押すとカレンダーを開きます" aria-haspopup="dialog">
+          <span class="label" id="dateLabel"></span><span class="cal" aria-hidden="true">📅</span>
+        </button>
+        <div id="cal" role="dialog" aria-label="カレンダー" hidden></div>
+      </div>
       <span class="clock" id="clock"></span>
-      <span class="spacer"></span>
-      <input type="date" id="datePick" aria-label="日付を選ぶ">
     </div>
-    <p class="hint" id="hint"></p>
-    <div class="gridwrap"><table id="grid"></table><div id="nowline"></div></div>
-    <div class="legend">
-      <span style="background:#fff"></span>空き
-      <span style="background:var(--other)"></span>ほかの人の予約
-      <span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約
-      <span style="background:var(--hatch)"></span>過去（予約できません）
+    <div class="infobar">
+      <p class="hint" id="hint"></p>
+      <div class="legendwrap">
+        <button type="button" class="help" id="legendBtn" aria-label="色の説明を見る" title="色の説明">？</button>
+        <div class="legend" id="legend" hidden>
+          <div class="li"><span style="background:#fff"></span>空き</div>
+          <div class="li"><span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約</div>
+          <div class="li"><span style="background:var(--other)"></span>ほかの人の予約</div>
+          <div class="li"><span style="background:var(--hatch)"></span>過去（予約できません）</div>
+        </div>
+      </div>
     </div>
+    <div class="gridwrap"><table id="grid"></table><div id="vlines"></div><div id="nowline"></div></div>
   </section>
 
-  <div class="loginbar">ログイン中（仮）<select id="who"></select></div>
-  <div class="cols">
-    <section class="card">
-      <h2>自分の予約（今後）</h2>
-      <div id="mine"></div>
-    </section>
-    <section class="card">
-      <h2 id="dayTitle">選んだ日の予約</h2>
-      <div id="day"></div>
-    </section>
-  </div>
+  <section class="card lists">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab on" id="tabMine" role="tab" aria-selected="true"></button>
+      <button type="button" class="tab" id="tabDay" role="tab" aria-selected="false"></button>
+    </div>
+    <div id="mine" class="list"></div>
+    <div id="day" class="list" hidden></div>
+  </section>
 
   <footer>画面の見た目と操作を確認するためのモックです（DB・API なし。重複や時間の検証は画面の中だけで動き、再読み込みで元に戻ります）。社員・会議室はすべて架空です。</footer>
 </div>
@@ -153,6 +206,27 @@ let reservations = [
   {id:5,roomId:1,empId:3,date:addDays(today,1),start:14*60,end:15*60,purpose:"面談"},
   {id:6,roomId:2,empId:5,date:addDays(today,1),start:10*60,end:12*60,purpose:"採用面接"},
   {id:7,roomId:4,empId:6,date:addDays(today,1),start:9*60+30,end:10*60,purpose:"電話会議"},
+  // 例題（日付・会議室・社員をばらけさせている）
+  {id:8,roomId:4,empId:3,date:today,start:11*60,end:12*60,purpose:"来客対応"},
+  {id:9,roomId:1,empId:1,date:today,start:14*60,end:15*60,purpose:"週次ミーティング"},
+  {id:10,roomId:2,empId:6,date:today,start:16*60,end:17*60+30,purpose:"新人研修"},
+  {id:11,roomId:3,empId:2,date:today,start:10*60,end:11*60,purpose:"資料レビュー"},
+  {id:12,roomId:1,empId:5,date:today,start:17*60,end:18*60,purpose:"1on1"},
+  {id:13,roomId:1,empId:1,date:addDays(today,1),start:9*60,end:10*60,purpose:"朝会"},
+  {id:14,roomId:3,empId:4,date:addDays(today,1),start:13*60,end:15*60,purpose:"予算会議"},
+  {id:15,roomId:4,empId:2,date:addDays(today,1),start:15*60,end:16*60,purpose:"オンライン商談"},
+  {id:16,roomId:2,empId:3,date:addDays(today,1),start:14*60,end:15*60+30,purpose:"勉強会"},
+  {id:17,roomId:3,empId:6,date:addDays(today,1),start:10*60+30,end:11*60+30,purpose:"面接"},
+  {id:18,roomId:1,empId:5,date:addDays(today,2),start:10*60,end:12*60,purpose:"企画会議"},
+  {id:19,roomId:2,empId:1,date:addDays(today,2),start:13*60,end:14*60,purpose:"架空商事 打ち合わせ"},
+  {id:20,roomId:3,empId:3,date:addDays(today,2),start:9*60,end:10*60,purpose:"朝会"},
+  {id:21,roomId:4,empId:4,date:addDays(today,2),start:14*60,end:15*60,purpose:"電話会議"},
+  {id:22,roomId:1,empId:2,date:addDays(today,2),start:15*60,end:16*60,purpose:"面談"},
+  {id:23,roomId:2,empId:1,date:addDays(today,3),start:10*60,end:11*60,purpose:"営業定例"},
+  {id:24,roomId:3,empId:6,date:addDays(today,3),start:13*60,end:15*60,purpose:"研修"},
+  {id:25,roomId:1,empId:3,date:addDays(today,3),start:11*60,end:12*60,purpose:"面談"},
+  {id:26,roomId:4,empId:1,date:addDays(today,5),start:16*60,end:17*60,purpose:"オンライン商談"},
+  {id:27,roomId:2,empId:2,date:addDays(today,5),start:9*60,end:10*60,purpose:"定例"},
 ];
 let who = 1, viewDate = today, sel = null, drag = null, pop = {mode:null,id:null};
 const $ = id => document.getElementById(id);
@@ -168,16 +242,15 @@ function toast(msg) { const t=$("toast"); t.textContent=msg; t.classList.add("sh
 /* ---------- 表（30 分単位） ---------- */
 function renderGrid() {
   $("dateLabel").textContent = longDate(viewDate);
-  $("datePick").value = viewDate;
   const ms = minStart(viewDate), n = nowMin();
-  $("hint").textContent = `空いている枠を押すと予約できます（ドラッグで長い時間をまとめて選べます）。予約できる時間は ${hm(OPEN)}〜${hm(CLOSE)}、時刻は 30 分刻みです。`
-    + (viewDate===today ? (ms>=CLOSE ? " 本日の受付は終了しました。" : ` 今日は ${hm(ms)} 以降から予約できます。`) : "");
+  $("hint").textContent = `空き枠を押して予約（ドラッグで長い時間も）。${hm(OPEN)}〜${hm(CLOSE)}・30 分刻み。`
+    + (viewDate===today ? (ms>=CLOSE ? " 本日の受付は終了しました。" : ` 今日は ${hm(ms)} 以降。`) : "");
   let h = `<tr><th class="room">会議室</th>`;
   for (let m=OPEN; m<CLOSE; m+=60) h += `<th class="hour" colspan="${60/UNIT}"><div><span>${hm(m)}</span>${m+60===CLOSE?`<span>${hm(CLOSE)}</span>`:""}</div></th>`;
   h += "</tr>";
   const hiddenId = pop.mode==="edit" ? pop.id : null;
   for (const r of rooms) {
-    h += `<tr><th class="room">${r.name}（${r.cap}名）</th>`;
+    h += `<tr class="${rooms.indexOf(r)%2===1?"alt":""}"><th class="room">${r.name}（${r.cap}名）</th>`;
     const day = reservations.filter(x=>x.roomId===r.id && x.date===viewDate && x.id!==hiddenId);
     if (sel && sel.draft && sel.roomId===r.id && sel.date===viewDate && sel.end>sel.start) day.push({draft:true, start:sel.start, end:sel.end});
     for (let m=OPEN; m<CLOSE; ) {
@@ -200,7 +273,7 @@ function renderGrid() {
     h += "</tr>";
   }
   $("grid").innerHTML = h;
-  paintSel(); placeNow(); tickClock();
+  paintSel(); placeNow(); tickClock(); renderCal();
 }
 function paintSel() {
   document.querySelectorAll("td.sel").forEach(td=>td.classList.remove("sel"));
@@ -210,7 +283,17 @@ function paintSel() {
     if (m<sel.end && e>sel.start) td.classList.add("sel");
   });
 }
+function drawVLines() {   // 時刻の縦線（1 時間ごとは太く、30 分ごとは細く）。奥の会議室まで見失わないように
+  const t=$("grid"), rw=t.querySelector("th.room").offsetWidth, w=t.offsetWidth-rw;
+  let h = "";
+  for (let m=OPEN+UNIT; m<CLOSE; m+=UNIT) {
+    const x = rw + (m-OPEN)/(CLOSE-OPEN)*w;
+    h += `<div class="vline ${m%60===0?"h":"m"}" style="left:${x}px;top:${t.offsetTop}px;height:${t.offsetHeight}px"></div>`;
+  }
+  $("vlines").innerHTML = h;
+}
 function placeNow() {
+  drawVLines();
   const line=$("nowline"), n=nowMin();
   if (viewDate!==today || n<OPEN || n>=CLOSE) { line.style.display="none"; return; }
   const t=$("grid"), rw=t.querySelector("th.room").offsetWidth;
@@ -220,8 +303,10 @@ function placeNow() {
 }
 function flash(id) { const c=document.querySelector(`td[data-id="${id}"]`); if (c) { c.classList.add("flash"); c.scrollIntoView({block:"nearest",inline:"nearest"}); } }
 function tickClock() {   // 今日以外の日を見ているときは、今日の日付も出す
-  const away = viewDate !== today, c = $("clock");
-  c.textContent = away ? `今日 ${shortDate(today)}　現在 ${hm(nowMin())}` : `現在 ${hm(nowMin())}`;
+  const away = viewDate !== today;
+  // 1 つの枠にまとめる。別の日を見ているときは、時刻の右に今日の日付をつなげる（時刻の位置は変わらない）
+  const c = $("clock");
+  c.textContent = away ? `現在 ${hm(nowMin())}　今日 ${shortDate(today)}` : `現在 ${hm(nowMin())}`;
   c.classList.toggle("away", away);
 }
 function hl(id) {   // カードに重ねたとき、表の予約枠を強調する
@@ -233,21 +318,23 @@ function hl(id) {   // カードに重ねたとき、表の予約枠を強調す
 function renderMine() {   // 自分の今後の予約（カードを押すと、その日にジャンプ）
   const list = reservations.filter(x=>x.empId===who && !finished(x))
     .sort((a,b)=> a.date===b.date ? a.start-b.start : a.date.localeCompare(b.date));
+  $("tabMine").textContent = `自分（${empName(who)}）の予約（今後）${list.length}件`;   // 誤ログインに気づけるよう名前を出す
   $("mine").innerHTML = list.length ? list.map(x=>`
     <div class="rcard mine jump${x.date===viewDate?" here":""}" data-id="${x.id}" title="押すと ${shortDate(x.date)} にジャンプします">
-      <div class="rtime">${shortDate(x.date)} ${hm(x.start)}〜${hm(x.end)}${x.date===viewDate?`<span class="tag">表示中</span>`:""}</div>
+      <div class="rtime">${shortDate(x.date)} ${hm(x.start)}〜${hm(x.end)}</div>
       <div class="rsub">${roomName(x.roomId)} ／ ${esc(x.purpose||"（用件なし）")}</div>
-      ${started(x) ? `<div class="rsub">進行中の予約は変更・キャンセルできません</div>`
+      ${started(x) ? `<span class="rsub" style="flex:none">進行中</span>`
         : `<div class="btns"><button data-edit="${x.id}">変更</button><button class="danger" data-del="${x.id}">キャンセル</button></div>`}</div>`).join("")
     : `<div class="empty">予約はまだありません。<br>上の表の空き枠を押して予約できます。</div>`;
 }
 function renderDay() {   // 選んだ日の、みんなの予約（自分の予約も含む）
-  $("dayTitle").textContent = `${shortDate(viewDate)} の予約（みんな）`;
   const list = reservations.filter(x=>x.date===viewDate).sort((a,b)=>a.start-b.start||a.roomId-b.roomId);
+  $("tabDay").textContent = `${shortDate(viewDate)} の予約（みんな）${list.length}件`;
   $("day").innerHTML = list.length ? list.map(x=>`
     <div class="rcard ${x.empId===who?"mine":"other"}${finished(x)?" done":""}" data-id="${x.id}">
-      <div class="rtime">${hm(x.start)}〜${hm(x.end)}　${roomName(x.roomId)}${x.empId===who?`<span class="tag">自分</span>`:""}</div>
-      <div class="rsub">${esc(x.purpose||"（用件なし）")}（${empName(x.empId)}）</div></div>`).join("")
+      <div class="rtime">${hm(x.start)}〜${hm(x.end)}</div>
+      <div class="rsub">${roomName(x.roomId)} ／ ${esc(x.purpose||"（用件なし）")}（${empName(x.empId)}）</div>
+      ${x.empId===who?`<span class="tag" style="margin:0">自分</span>`:""}</div>`).join("")
     : `<div class="empty">この日の予約はまだありません</div>`;
 }
 function renderAll() { renderGrid(); renderMine(); renderDay(); }
@@ -403,16 +490,75 @@ $("mine").onclick = e => {
     go(x.date); window.scrollTo({top:0, behavior:"smooth"}); flash(x.id);
   }
 };
-$("day").onclick = e => { const c = e.target.closest(".rcard"); if (c) flash(Number(c.dataset.id)); };
+$("day").onclick = e => {   // 一覧のカードを押すと、表の枠を押したときと同じ詳細を出す
+  const c = e.target.closest(".rcard"); if (!c) return;
+  const x = find(Number(c.dataset.id));
+  window.scrollTo(0, 0);
+  const td = document.querySelector(`td[data-id="${x.id}"]`); if (!td) return;
+  flash(x.id); openPop({mode:"view", ...x}, td.getBoundingClientRect());
+};
 $("who").onchange = () => { who = Number($("who").value); closePop(); renderAll(); };
-const go = d => { closePop(); viewDate = d; renderAll(); };
+const go = d => { closePop(); viewDate = d; calY = Number(d.slice(0,4)); calM = Number(d.slice(5,7)); renderAll(); };
 $("prev").onclick = () => go(addDays(viewDate,-1));
 $("next").onclick = () => go(addDays(viewDate,1));
 $("today").onclick = () => go(today);
-$("datePick").onchange = () => { if ($("datePick").value) go($("datePick").value); };
+
+/* ---------- ミニカレンダー（日付を選んでも閉じない。×か外側のクリックで閉じる） ---------- */
+let calY = Number(viewDate.slice(0,4)), calM = Number(viewDate.slice(5,7));
+function renderCal() {
+  if ($("cal").hidden) return;
+  const first = new Date(calY, calM-1, 1), start = new Date(calY, calM-1, 1-first.getDay());
+  let h = `<div class="cal-head"><button id="calPrev" aria-label="前の月">◀</button><div class="cal-title">${calY}年${calM}月</div><button id="calNext" aria-label="次の月">▶</button><span class="spacer"></span><button id="calToday">今日</button><button class="cal-x" id="calX" aria-label="閉じる" title="閉じる">×</button></div><div class="cal-grid">`;
+  "日月火水木金土".split("").forEach((w,i) => h += `<div class="dow${i===0?" sun":i===6?" sat":""}">${w}</div>`);
+  for (let i=0; i<42; i++) {
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const s = ymd(d), dow = d.getDay();
+    const cls = ["day", d.getMonth()!==calM-1?"out":"", s===today?"today":"", s===viewDate?"sel":"", dow===0?"sun":dow===6?"sat":""].filter(Boolean).join(" ");
+    const day = reservations.filter(r=>r.date===s);   // 点: 自分の予約は青、ほかの人の予約は灰色（両方あれば 2 つ）
+    const dots = (day.some(r=>r.empId===who)?`<span class="dot mine"></span>`:"") + (day.some(r=>r.empId!==who)?`<span class="dot other"></span>`:"");
+    h += `<button type="button" class="${cls}" data-d="${s}">${d.getDate()}${dots?`<span class="dots">${dots}</span>`:""}</button>`;
+  }
+  $("cal").innerHTML = h + `</div><div class="cal-legend"><span class="dot mine"></span>自分の予約<span class="dot other"></span>ほかの人の予約</div>`;
+}
+const closeCal = () => { $("cal").hidden = true; };
+$("dateBtn").onclick = () => { if ($("cal").hidden) { calY = Number(viewDate.slice(0,4)); calM = Number(viewDate.slice(5,7)); $("cal").hidden = false; renderCal(); } else closeCal(); };
+$("cal").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id==="calX") return closeCal();
+  if (b.id==="calToday") return go(today);   // 今日へ（カレンダーは開いたまま）
+  if (b.id==="calPrev" || b.id==="calNext") { calM += b.id==="calNext" ? 1 : -1; if (calM<1) { calM=12; calY--; } if (calM>12) { calM=1; calY++; } return renderCal(); }
+  if (b.dataset.d) go(b.dataset.d);   // 選んでも閉じない（表だけ切り替わる）
+};
+document.addEventListener("mousedown", e => { if (!$("cal").hidden && !$("cal").contains(e.target) && !$("dateBtn").contains(e.target)) closeCal(); });
+document.addEventListener("keydown", e => { if (e.key==="Escape") closeCal(); });
 window.addEventListener("resize", placeNow);
 setInterval(() => { if (!drag) renderAll(); }, 30000);
-document.addEventListener("mouseover", e => { const c = e.target.closest(".rcard[data-id]"); hl(c ? c.dataset.id : null); });
+function hlCards(id) {   // 表の枠にカーソルを重ねたとき、下の一覧のカードの色も変える
+  document.querySelectorAll(".rcard.hl").forEach(c=>c.classList.remove("hl"));
+  if (!id) return;
+  document.querySelectorAll(`.rcard[data-id="${id}"]`).forEach(c => {
+    c.classList.add("hl");
+    const box = c.parentElement;   // 一覧の中でスクロールが必要なら、一覧の中だけ動かす
+    if (box.hidden) return;        // 別のタブにあるときは何もしない
+    if (c.offsetTop < box.scrollTop || c.offsetTop + c.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = c.offsetTop - box.offsetTop - 8;
+  });
+}
+document.addEventListener("mouseover", e => {
+  const c = e.target.closest(".rcard[data-id]"), t = e.target.closest("td[data-id]");
+  hl(c ? c.dataset.id : null);        // 一覧 → 表
+  hlCards(t ? t.dataset.id : null);   // 表 → 一覧
+});
+
+/* ---------- 一覧のタブ・色の説明（？） ---------- */
+function setTab(t) {
+  $("mine").hidden = t!=="mine"; $("day").hidden = t!=="day";
+  [["mine","tabMine"],["day","tabDay"]].forEach(([k,id]) => { $(id).classList.toggle("on", k===t); $(id).setAttribute("aria-selected", k===t); });
+}
+$("tabMine").onclick = () => setTab("mine");
+$("tabDay").onclick = () => setTab("day");
+$("legendBtn").onclick = () => { $("legend").hidden = !$("legend").hidden; };
+document.addEventListener("mousedown", e => { if (!$("legend").hidden && !$("legend").contains(e.target) && !$("legendBtn").contains(e.target)) $("legend").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key==="Escape") $("legend").hidden = true; });
 
 // 初期表示
 $("who").innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
