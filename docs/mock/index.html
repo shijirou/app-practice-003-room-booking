@@ -47,7 +47,7 @@
   #nowline { position:absolute; width:2px; background:var(--red); pointer-events:none; display:none; }
   #nowline::before { content:""; position:absolute; top:-4px; left:-4px; width:10px; height:10px; border-radius:50%; background:var(--red); }
   .infobar { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:8px; }
-  .infobar .hint { margin:0; flex:1; min-width:320px; }
+  .infobar .hint { margin:0; flex:1; white-space:nowrap; }
   .legend { font-size:13px; color:var(--sub); white-space:nowrap; }
   .legend span { display:inline-block; width:14px; height:14px; vertical-align:middle; border:1px solid var(--line); border-radius:3px; margin:0 5px 0 16px; }
   .legend span:first-child { margin-left:0; }
@@ -112,7 +112,7 @@
         <span style="background:#fff"></span>空き
         <span style="background:var(--other)"></span>ほかの人の予約
         <span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約
-        <span style="background:var(--hatch)"></span>過去（予約できません）
+        <span style="background:var(--hatch)"></span>過去
       </div>
     </div>
     <div class="gridwrap"><table id="grid"></table><div id="vlines"></div><div id="nowline"></div></div>
@@ -201,8 +201,8 @@ function renderGrid() {
   $("dateLabel").textContent = longDate(viewDate);
   $("datePick").value = viewDate;
   const ms = minStart(viewDate), n = nowMin();
-  $("hint").textContent = `空いている枠を押すと予約できます（ドラッグで長い時間をまとめて選べます）。予約できる時間は ${hm(OPEN)}〜${hm(CLOSE)}、時刻は 30 分刻みです。`
-    + (viewDate===today ? (ms>=CLOSE ? " 本日の受付は終了しました。" : ` 今日は ${hm(ms)} 以降から予約できます。`) : "");
+  $("hint").textContent = `空き枠を押して予約（ドラッグで長い時間も）。${hm(OPEN)}〜${hm(CLOSE)}・30 分刻み。`
+    + (viewDate===today ? (ms>=CLOSE ? " 本日の受付は終了しました。" : ` 今日は ${hm(ms)} 以降。`) : "");
   let h = `<tr><th class="room">会議室</th>`;
   for (let m=OPEN; m<CLOSE; m+=60) h += `<th class="hour" colspan="${60/UNIT}"><div><span>${hm(m)}</span>${m+60===CLOSE?`<span>${hm(CLOSE)}</span>`:""}</div></th>`;
   h += "</tr>";
