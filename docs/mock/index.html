@@ -50,8 +50,10 @@
   .legend span { display:inline-block; width:14px; height:14px; vertical-align:middle; border:1px solid var(--line); border-radius:3px; margin:0 5px 0 16px; }
   .legend span:first-child { margin-left:0; }
   .hint { font-size:13px; color:var(--sub); margin:0 0 8px; }
-  .loginbar { display:flex; align-items:center; gap:8px; margin:16px 0 10px; color:var(--sub); font-size:14px; }
-  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+  header.top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  header.top h1 { margin:0; }
+  .loginbar { display:flex; align-items:center; gap:8px; color:var(--sub); font-size:14px; }
+  .cols { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
   .list { max-height:340px; overflow-y:auto; padding-right:2px; }
   .rcard { display:flex; align-items:center; gap:10px; min-height:30px; border:1px solid var(--line); border-left:5px solid var(--other); border-radius:6px; padding:3px 10px; margin-bottom:5px; background:#fff; font-size:13px; transition:box-shadow .12s, background .12s; }
   .rcard:last-child { margin-bottom:0; }
@@ -90,7 +92,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>会議室予約</h1>
+  <header class="top"><h1>会議室予約</h1><label class="loginbar">ログイン中（仮）<select id="who"></select></label></header>
 
   <section class="card">
     <div class="datebar">
@@ -112,7 +114,6 @@
     </div>
   </section>
 
-  <div class="loginbar">ログイン中（仮）<select id="who"></select></div>
   <div class="cols">
     <section class="card">
       <h2 id="mineTitle">自分の予約（今後）</h2>
