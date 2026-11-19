@@ -40,8 +40,14 @@
   .day.out { opacity:.4; }
   .day.today { border-color:var(--blue); }
   .day.sel, .day.sel:hover { background:var(--blue); color:#fff; opacity:1; }
-  .day .dot { position:absolute; left:50%; bottom:2px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:var(--sub); }
-  .day.sel .dot { background:#fff; }
+  .dots { position:absolute; left:0; right:0; bottom:3px; display:flex; justify-content:center; gap:3px; }
+  .dot { width:5px; height:5px; border-radius:50%; }
+  .dot.mine { background:var(--blue); }
+  .dot.other { background:#8b95a5; }
+  .day.sel .dot.mine { background:#fff; }
+  .day.sel .dot.other { background:rgba(255,255,255,.55); }
+  .cal-legend { margin-top:8px; font-size:12px; color:var(--sub); text-align:center; }
+  .cal-legend .dot { display:inline-block; margin:0 4px 0 10px; vertical-align:middle; }
   .clock { display:inline-flex; align-items:center; gap:8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); font-size:18px; font-weight:bold; }
   .clock[hidden] { display:none; }
   .datebar .spacer { flex:1; }
@@ -490,9 +496,11 @@ function renderCal() {
     const d = new Date(start); d.setDate(start.getDate()+i);
     const s = ymd(d), dow = d.getDay();
     const cls = ["day", d.getMonth()!==calM-1?"out":"", s===today?"today":"", s===viewDate?"sel":"", dow===0?"sun":dow===6?"sat":""].filter(Boolean).join(" ");
-    h += `<button type="button" class="${cls}" data-d="${s}">${d.getDate()}${reservations.some(r=>r.date===s)?`<span class="dot"></span>`:""}</button>`;
+    const day = reservations.filter(r=>r.date===s);   // 点: 自分の予約は青、ほかの人の予約は灰色（両方あれば 2 つ）
+    const dots = (day.some(r=>r.empId===who)?`<span class="dot mine"></span>`:"") + (day.some(r=>r.empId!==who)?`<span class="dot other"></span>`:"");
+    h += `<button type="button" class="${cls}" data-d="${s}">${d.getDate()}${dots?`<span class="dots">${dots}</span>`:""}</button>`;
   }
-  $("cal").innerHTML = h + `</div>`;
+  $("cal").innerHTML = h + `</div><div class="cal-legend"><span class="dot mine"></span>自分の予約<span class="dot other"></span>ほかの人の予約</div>`;
 }
 const closeCal = () => { $("cal").hidden = true; };
 $("dateBtn").onclick = () => { if ($("cal").hidden) { calY = Number(viewDate.slice(0,4)); calM = Number(viewDate.slice(5,7)); $("cal").hidden = false; renderCal(); } else closeCal(); };
