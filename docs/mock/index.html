@@ -8,92 +8,178 @@
   :root { --bg:#eef1f5; --text:#1b1f24; --sub:#5f6975; --card:#fff; --blue:#0b5cad; --other:#cfd6e4; --red:#b3261e; --line:#c4cad2; --soft:#e6e9ee; --hatch:repeating-linear-gradient(45deg,#f1f3f6,#f1f3f6 4px,#e2e6eb 4px,#e2e6eb 5px); }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:"Yu Gothic UI","Meiryo",sans-serif; font-size:15px; }
-  .wrap { max-width:1200px; margin:0 auto; padding:16px; }
-  .note { background:#fff8d6; border:1px solid #e0c64a; padding:6px 10px; border-radius:6px; font-size:13px; margin-bottom:12px; }
-  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-  h1 { font-size:20px; margin:0; }
+  .wrap { max-width:1280px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0 0 12px; }
   h2 { font-size:16px; margin:0 0 10px; }
-  .card { background:var(--card); border-radius:8px; padding:14px; margin-bottom:14px; box-shadow:0 1px 2px rgba(0,0,0,.12); }
+  .card { background:var(--card); border-radius:8px; padding:14px; box-shadow:0 1px 2px rgba(0,0,0,.12); }
   select, input[type=text], input[type=date] { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; }
   button { font:inherit; padding:6px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
+  button:hover { background:#f3f5f7; }
   button.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
-  button.danger:hover { color:var(--red); border-color:var(--red); }
-  .datebar { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
-  .datebar .label { font-weight:bold; font-size:18px; min-width:190px; text-align:center; }
-  .gridwrap { overflow-x:auto; }
-  table { border-collapse:collapse; table-layout:fixed; width:100%; min-width:900px; }
-  th, td { border:1px solid var(--soft); height:42px; padding:0; text-align:center; font-size:13px; }
-  th.room { width:150px; white-space:nowrap; text-align:left; padding:0 10px; background:#f3f5f7; font-size:13px; border-color:var(--line); }
-  th.hour { background:#f3f5f7; color:var(--sub); font-weight:normal; text-align:left; padding-left:6px; border-color:var(--line); }
-  td.hr { border-left-color:var(--line); }
+  button.primary:hover { background:#094b8f; }
+  button.danger { color:var(--red); border-color:#e3b5b1; }
+  button.danger:hover { background:#fdecea; border-color:var(--red); }
+  .datebar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  .datebar .label { font-weight:bold; font-size:18px; display:inline-block; min-width:182px; }   /* 日付が変わっても右の時刻の位置がずれない */
+  .datepick { position:relative; display:inline-flex; align-items:center; gap:8px; margin:0 4px 0 8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
+  .datepick:hover { background:#f3f5f7; border-color:var(--blue); }
+  .datewrap { position:relative; }
+  #cal { position:absolute; top:calc(100% + 6px); left:8px; z-index:25; width:320px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; box-shadow:0 8px 28px rgba(0,0,0,.25); }
+  #cal[hidden] { display:none; }
+  .cal-head { display:flex; align-items:center; gap:4px; margin-bottom:8px; }
+  .cal-head button { height:30px; display:inline-flex; align-items:center; justify-content:center; padding:0 10px; line-height:1; }
+  .cal-title { padding:0 4px; font-weight:bold; white-space:nowrap; line-height:30px; }
+  .cal-head .spacer { flex:1; }
+  .cal-head .cal-x { width:30px; padding:0; border:none; background:none; font-size:22px; color:var(--sub); }
+  .cal-head .cal-x:hover { color:var(--red); background:none; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+  .cal-grid .dow { display:flex; align-items:center; justify-content:center; height:24px; font-size:12px; color:var(--sub); }
+  .cal-grid .sun { color:var(--red); } .cal-grid .sat { color:var(--blue); }
+  .day { position:relative; display:flex; align-items:center; justify-content:center; height:36px; border:1px solid transparent; border-radius:6px; background:none; padding:0; font-size:14px; cursor:pointer; }
+  .day:hover { background:#e3eefb; }
+  .day.out { opacity:.4; }
+  .day.today { border-color:var(--blue); }
+  .day.sel, .day.sel:hover { background:var(--blue); color:#fff; opacity:1; }
+  .dots { position:absolute; left:0; right:0; bottom:3px; display:flex; justify-content:center; gap:3px; }
+  .dot { width:5px; height:5px; border-radius:50%; }
+  .dot.mine { background:var(--blue); }
+  .dot.other { background:#8b95a5; }
+  .day.sel .dot.mine { background:#fff; }
+  .day.sel .dot.other { background:rgba(255,255,255,.55); }
+  .cal-legend { margin-top:8px; font-size:12px; color:var(--sub); text-align:center; }
+  .cal-legend .dot { display:inline-block; margin:0 4px 0 10px; vertical-align:middle; }
+  .clock { display:inline-flex; align-items:center; gap:8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); font-size:18px; font-weight:bold; }
+  .clock[hidden] { display:none; }
+  .datebar .spacer { flex:1; }
+  .gridwrap { overflow-x:auto; position:relative; }
+  table { border-collapse:collapse; table-layout:fixed; width:100%; min-width:960px; user-select:none; }
+  th, td { border:1px solid var(--soft); height:44px; padding:0; text-align:center; font-size:13px; }
+  th.room { width:150px; white-space:nowrap; text-align:left; padding:0 10px; background:#f3f5f7; border-color:var(--line); }
+  th.hour { background:#f3f5f7; color:var(--sub); font-weight:normal; padding:0 6px; border-color:var(--line); }
+  th.hour div { display:flex; justify-content:space-between; }
+  td.hr { border-left-color:#d6dbe2; }
   td.free { background:#fff; cursor:pointer; }
-  td.free:hover { background:#d6e6fa; }
+  tr.alt td.free:not(:hover):not(.sel) { background:#f9fafb; }   /* 1 行おきに薄いグレー（右端まで目で追いやすく） */
+  td.free:hover::after { content:"＋"; color:var(--blue); font-weight:bold; }
+  td.free:hover { background:#e3eefb; }
+  td.sel, td.sel:hover { background:#b9d5f5; }
   td.past { background:var(--hatch); cursor:not-allowed; }
-  td.busy { background:var(--other); color:#2b3342; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; border-color:#fff; }
-  td.mine { background:var(--blue); color:#fff; font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; border-color:#fff; }
-  .legend { font-size:13px; color:var(--sub); margin-top:10px; }
-  .legend span { display:inline-block; width:14px; height:14px; vertical-align:middle; border:1px solid var(--line); border-radius:3px; margin:0 5px 0 16px; }
-  .legend span:first-child { margin-left:0; }
-  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
-  .row { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:10px; }
-  .row select, .row input { width:100%; max-width:260px; }
-  .err { color:var(--red); background:#fdecea; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:14px; }
-  .ok { color:#1a7f37; background:#e8f5ec; border-radius:6px; padding:6px 10px; margin-top:10px; font-size:14px; }
-  .err:empty, .ok:empty { display:none; }
-  .item { border-bottom:1px solid #e6e9ed; padding:8px 0; display:flex; justify-content:space-between; gap:10px; align-items:center; }
-  .item:last-child { border-bottom:none; }
-  .item .sub { color:var(--sub); font-size:13px; }
-  .item .btns { display:flex; gap:16px; flex-shrink:0; }
+  td.draft { background:#dbe9fb; border:2px dashed var(--blue); color:var(--blue); font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; }
+  td.busy, td.mine { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; border-color:#fff; cursor:pointer; }
+  td.busy { background:var(--other); color:#2b3342; }
+  td.busy:hover { background:#bcc6da; }
+  td.mine { background:var(--blue); color:#fff; font-weight:bold; }
+  td.mine:hover { background:#094b8f; }
+  td.flash { animation:flash 1.4s ease-out 1; }
+  @keyframes flash { 0%,40% { box-shadow:inset 0 0 0 3px #ffd54a, 0 0 12px 2px #ffd54a; } 100% { box-shadow:none; } }
+  #nowline { position:absolute; width:2px; background:var(--red); pointer-events:none; display:none; }
+  #nowline::before { content:""; position:absolute; top:-4px; left:-4px; width:10px; height:10px; border-radius:50%; background:var(--red); }
+  .infobar { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:8px; }
+  .infobar .hint { margin:0; flex:1; white-space:nowrap; }
+  .legendwrap { position:relative; }
+  .help { width:28px; height:28px; padding:0; border-radius:50%; font-weight:bold; color:var(--blue); line-height:1; }
+  .legend { position:absolute; right:0; top:calc(100% + 6px); z-index:15; display:flex; flex-direction:column; gap:8px; padding:12px 16px; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.25); font-size:13px; color:var(--text); white-space:nowrap; }
+  .legend[hidden] { display:none; }
+  .legend .li { display:flex; align-items:center; }
+  .legend .li span { display:inline-block; width:16px; height:16px; border:1px solid var(--line); border-radius:3px; margin-right:8px; }
+  .lists { margin-top:14px; }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; border-bottom:1px solid var(--line); }
+  .tab { border:none; border-bottom:3px solid transparent; border-radius:0; background:none; padding:6px 14px; font-size:15px; color:var(--sub); }
+  .tab:hover { background:#f3f5f7; }
+  .tab.on { color:var(--blue); font-weight:bold; border-bottom-color:var(--blue); }
+  .list[hidden] { display:none; }
+  .hint { font-size:13px; color:var(--sub); margin:0 0 8px; }
+  header.top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  header.top h1 { margin:0; }
+  .loginbar { display:flex; align-items:center; gap:8px; color:var(--sub); font-size:14px; }
+  .cols { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+  .list { max-height:340px; overflow-y:auto; padding-right:2px; }
+  .rcard { display:flex; align-items:center; gap:10px; min-height:30px; border:1px solid var(--line); border-left:5px solid var(--other); border-radius:6px; padding:3px 10px; margin-bottom:5px; background:#fff; font-size:13px; transition:box-shadow .12s, background .12s; }
+  .rcard:last-child { margin-bottom:0; }
+  .rcard.mine { border-left-color:var(--blue); background:#f2f7fd; }
+  .rcard:hover { box-shadow:0 2px 8px rgba(0,0,0,.18); background:#fffbe8; }
+  .rcard.hl { box-shadow:0 2px 8px rgba(0,0,0,.18); background:#fffbe8; border-color:#e0b100; }   /* 表の枠にカーソルを重ねたとき */
+  #day .rcard { cursor:pointer; }
+  .rcard.jump { cursor:pointer; }
+  .rcard.done { opacity:.55; }
+  .rcard .rtime { font-weight:bold; white-space:nowrap; }
+  .rcard .rsub { flex:1; min-width:0; color:var(--sub); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .rcard .btns { display:flex; gap:6px; }
+  .rcard .btns button { padding:1px 8px; font-size:12px; }
+  .vline { position:absolute; top:0; pointer-events:none; z-index:1; }
+  .vline.h { width:2px; background:rgba(45,55,72,.11); margin-left:-1px; }
+  .vline.m { width:1px; background:rgba(45,55,72,.05); }
+  .tag { display:inline-block; margin-left:8px; padding:0 8px; border-radius:999px; background:var(--blue); color:#fff; font-size:11px; font-weight:normal; vertical-align:1px; }
+  td.hl { outline:4px solid #ffb300; outline-offset:-4px; position:relative; z-index:2; }
+  .clock.away { background:#fff1cc; border-color:#e6c46a; color:#7a4b00; }
   .empty { color:var(--sub); padding:6px 0; }
+  .err { color:var(--red); background:#fdecea; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:14px; }
+  .err:empty { display:none; }
+  #pop { display:none; position:absolute; z-index:20; width:330px; background:#fff; border-radius:10px; padding:14px; box-shadow:0 8px 28px rgba(0,0,0,.25); border:1px solid var(--line); }
+  .pop-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .pop-head .x { border:none; background:none; font-size:20px; line-height:1; padding:0 4px; color:var(--sub); }
+  .prow { display:grid; grid-template-columns:56px 1fr; gap:8px; align-items:center; margin-bottom:10px; }
+  .prow select, .prow input[type=text], .prow input[type=date] { width:100%; }
+  .times { display:flex; gap:6px; align-items:center; }
+  .times select { flex:1; }
+  .pbtns { display:flex; justify-content:flex-end; gap:8px; margin-top:4px; }
+  .detail { margin:0 0 12px; line-height:1.7; }
+  .detail .big { font-size:16px; font-weight:bold; }
+  .note { color:var(--sub); font-size:13px; }
+  #toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#1f2933; color:#fff; padding:10px 18px; border-radius:8px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .2s; z-index:30; }
+  #toast.show { opacity:1; }
+  footer { margin-top:14px; font-size:12px; color:var(--sub); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="note">画面の見た目と操作を確認するためのモックです（DB・API なし。予約の重複・時間の検証は画面の中だけで動きます。リロードすると元に戻ります）。社員・会議室はすべて架空です。</div>
-  <header>
-    <h1>会議室予約</h1>
-    <label>操作する社員 <select id="who"></select></label>
-  </header>
+  <header class="top"><h1>会議室予約</h1><label class="loginbar">ログイン中（仮）<select id="who"></select></label></header>
 
   <section class="card">
     <div class="datebar">
-      <button id="prev">◀ 前の日</button>
-      <span class="label" id="dateLabel"></span>
+      <button id="prev" aria-label="前の日">◀</button>
       <button id="today">今日</button>
-      <button id="next">次の日 ▶</button>
-      <input type="date" id="datePick" aria-label="日付を選ぶ">
+      <button id="next" aria-label="次の日">▶</button>
+      <div class="datewrap">
+        <button type="button" class="datepick" id="dateBtn" title="押すとカレンダーを開きます" aria-haspopup="dialog">
+          <span class="label" id="dateLabel"></span><span class="cal" aria-hidden="true">📅</span>
+        </button>
+        <div id="cal" role="dialog" aria-label="カレンダー" hidden></div>
+      </div>
+      <span class="clock" id="clock"></span>
     </div>
-    <div class="gridwrap"><table id="grid"></table></div>
-    <div class="legend">
-      <span style="background:#fff"></span>空き（押すと予約フォームに入ります）
-      <span style="background:var(--other)"></span>ほかの人の予約
-      <span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約
-      <span style="background:var(--hatch)"></span>過去（予約できません）
+    <div class="infobar">
+      <p class="hint" id="hint"></p>
+      <div class="legendwrap">
+        <button type="button" class="help" id="legendBtn" aria-label="色の説明を見る" title="色の説明">？</button>
+        <div class="legend" id="legend" hidden>
+          <div class="li"><span style="background:#fff"></span>空き</div>
+          <div class="li"><span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約</div>
+          <div class="li"><span style="background:var(--other)"></span>ほかの人の予約</div>
+          <div class="li"><span style="background:var(--hatch)"></span>過去（予約できません）</div>
+        </div>
+      </div>
     </div>
+    <div class="gridwrap"><table id="grid"></table><div id="vlines"></div><div id="nowline"></div></div>
   </section>
 
-  <div class="cols">
-    <section class="card">
-      <h2 id="formTitle">予約する</h2>
-      <div class="err" id="err" role="alert"></div>
-      <div class="row"><label for="room">会議室</label><select id="room"></select></div>
-      <div class="row"><label for="date">日付</label><input type="date" id="date"></div>
-      <div class="row"><label for="start">開始</label><select id="start"></select></div>
-      <div class="row"><label for="end">終了</label><select id="end"></select></div>
-      <div class="row"><label for="purpose">用件</label><input type="text" id="purpose" maxlength="50" placeholder="任意（50 文字まで）"></div>
-      <button class="primary" id="submit">予約する</button>
-      <button id="cancelEdit" style="display:none">やめる</button>
-      <div class="ok" id="ok" role="status"></div>
-    </section>
-    <section class="card">
-      <h2>自分の予約</h2>
-      <div id="mine"></div>
-    </section>
-  </div>
+  <section class="card lists">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab on" id="tabMine" role="tab" aria-selected="true"></button>
+      <button type="button" class="tab" id="tabDay" role="tab" aria-selected="false"></button>
+    </div>
+    <div id="mine" class="list"></div>
+    <div id="day" class="list" hidden></div>
+  </section>
+
+  <footer>画面の見た目と操作を確認するためのモックです（DB・API なし。重複や時間の検証は画面の中だけで動き、再読み込みで元に戻ります）。社員・会議室はすべて架空です。</footer>
 </div>
 
+<div id="pop" role="dialog" aria-label="予約"></div>
+<div id="toast" role="status"></div>
+
 <script>
-const OPEN = 8*60, CLOSE = 20*60, STEP = 30;
+const OPEN = 8*60, CLOSE = 20*60, UNIT = 30;   // 要件定義書: 8:00〜20:00、30 分刻み
 const employees = [{id:1,name:"田中架空"},{id:2,name:"佐藤架空"},{id:3,name:"鈴木架空"},{id:4,name:"高橋架空"},{id:5,name:"伊藤架空"},{id:6,name:"渡辺架空"}];
 const rooms = [{id:1,name:"会議室A",cap:4},{id:2,name:"会議室B",cap:6},{id:3,name:"会議室C",cap:10},{id:4,name:"商談ブース",cap:2}];
 const esc = t => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -104,6 +190,12 @@ const youbi = s => "日月火水木金土"[new Date(s+"T00:00:00").getDay()];
 const nowMin = () => { const n=new Date(); return n.getHours()*60+n.getMinutes(); };
 const today = ymd(new Date());
 const addDays = (s,n) => { const d=new Date(s+"T00:00:00"); d.setDate(d.getDate()+n); return ymd(d); };
+const longDate = s => { const [y,m,d]=s.split("-").map(Number); return `${y}年${m}月${d}日（${youbi(s)}）`; };
+const shortDate = s => `${Number(s.slice(5,7))}/${Number(s.slice(8))}(${youbi(s)})`;
+// 予約を始められる最も早い時刻（今日は、今の時刻を 30 分単位で切り上げ）
+const minStart = date => date < today ? Infinity : date === today ? Math.ceil(nowMin()/UNIT)*UNIT : 0;
+const finished = x => x.date < today || (x.date === today && x.end <= nowMin());
+const started = x => x.date < today || (x.date === today && x.start <= nowMin());
 
 let nextId = 100;
 let reservations = [
@@ -112,129 +204,365 @@ let reservations = [
   {id:3,roomId:3,empId:4,date:today,start:15*60,end:17*60,purpose:"企画会議"},
   {id:4,roomId:4,empId:1,date:addDays(today,2),start:10*60,end:11*60,purpose:"オンライン商談"},
   {id:5,roomId:1,empId:3,date:addDays(today,1),start:14*60,end:15*60,purpose:"面談"},
+  {id:6,roomId:2,empId:5,date:addDays(today,1),start:10*60,end:12*60,purpose:"採用面接"},
+  {id:7,roomId:4,empId:6,date:addDays(today,1),start:9*60+30,end:10*60,purpose:"電話会議"},
+  // 例題（日付・会議室・社員をばらけさせている）
+  {id:8,roomId:4,empId:3,date:today,start:11*60,end:12*60,purpose:"来客対応"},
+  {id:9,roomId:1,empId:1,date:today,start:14*60,end:15*60,purpose:"週次ミーティング"},
+  {id:10,roomId:2,empId:6,date:today,start:16*60,end:17*60+30,purpose:"新人研修"},
+  {id:11,roomId:3,empId:2,date:today,start:10*60,end:11*60,purpose:"資料レビュー"},
+  {id:12,roomId:1,empId:5,date:today,start:17*60,end:18*60,purpose:"1on1"},
+  {id:13,roomId:1,empId:1,date:addDays(today,1),start:9*60,end:10*60,purpose:"朝会"},
+  {id:14,roomId:3,empId:4,date:addDays(today,1),start:13*60,end:15*60,purpose:"予算会議"},
+  {id:15,roomId:4,empId:2,date:addDays(today,1),start:15*60,end:16*60,purpose:"オンライン商談"},
+  {id:16,roomId:2,empId:3,date:addDays(today,1),start:14*60,end:15*60+30,purpose:"勉強会"},
+  {id:17,roomId:3,empId:6,date:addDays(today,1),start:10*60+30,end:11*60+30,purpose:"面接"},
+  {id:18,roomId:1,empId:5,date:addDays(today,2),start:10*60,end:12*60,purpose:"企画会議"},
+  {id:19,roomId:2,empId:1,date:addDays(today,2),start:13*60,end:14*60,purpose:"架空商事 打ち合わせ"},
+  {id:20,roomId:3,empId:3,date:addDays(today,2),start:9*60,end:10*60,purpose:"朝会"},
+  {id:21,roomId:4,empId:4,date:addDays(today,2),start:14*60,end:15*60,purpose:"電話会議"},
+  {id:22,roomId:1,empId:2,date:addDays(today,2),start:15*60,end:16*60,purpose:"面談"},
+  {id:23,roomId:2,empId:1,date:addDays(today,3),start:10*60,end:11*60,purpose:"営業定例"},
+  {id:24,roomId:3,empId:6,date:addDays(today,3),start:13*60,end:15*60,purpose:"研修"},
+  {id:25,roomId:1,empId:3,date:addDays(today,3),start:11*60,end:12*60,purpose:"面談"},
+  {id:26,roomId:4,empId:1,date:addDays(today,5),start:16*60,end:17*60,purpose:"オンライン商談"},
+  {id:27,roomId:2,empId:2,date:addDays(today,5),start:9*60,end:10*60,purpose:"定例"},
 ];
-let who = 1, viewDate = today, editingId = null;
+let who = 1, viewDate = today, sel = null, drag = null, pop = {mode:null,id:null};
 const $ = id => document.getElementById(id);
 const empName = id => employees.find(e=>e.id===id).name;
 const roomName = id => rooms.find(r=>r.id===id).name;
+const find = id => reservations.find(r=>r.id===id);
+const overlaps = (room,date,lo,hi,exceptId) => reservations.some(x=>x.id!==exceptId && x.roomId===room && x.date===date && x.start<hi && x.end>lo);
+// その開始時刻から、最大 1 時間（次の予約・閉館まで）
+const maxEnd = (room,date,start) => Math.min(CLOSE, start+60, ...reservations.filter(x=>x.roomId===room && x.date===date && x.start>=start).map(x=>x.start));
 
-function slotOpts(sel, from, to, selected) {
-  sel.innerHTML = "";
-  for (let m=from; m<=to; m+=STEP) { const o=document.createElement("option"); o.value=m; o.textContent=hm(m); if (m===selected) o.selected=true; sel.appendChild(o); }
-}
-function fillEnd(preferred) {
-  const s = Number($("start").value);
-  const want = preferred ?? Math.min(s+60, CLOSE);
-  slotOpts($("end"), s+STEP, CLOSE, want);
-}
-function setForm(roomId, date, start, end, purpose) {
-  $("room").value = roomId; $("date").value = date;
-  $("start").value = start; fillEnd(end); $("purpose").value = purpose || "";
-}
-function isPast(date, startMin) { return date < today || (date === today && startMin < nowMin()); }
+function toast(msg) { const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("show"), 2500); }
 
+/* ---------- 表（30 分単位） ---------- */
 function renderGrid() {
-  const [vy, vm, vd] = viewDate.split("-").map(Number);
-  $("dateLabel").textContent = `${vy}年${vm}月${vd}日（${youbi(viewDate)}）`;
-  $("datePick").value = viewDate;
+  $("dateLabel").textContent = longDate(viewDate);
+  const ms = minStart(viewDate), n = nowMin();
+  $("hint").textContent = `空き枠を押して予約（ドラッグで長い時間も）。${hm(OPEN)}〜${hm(CLOSE)}・30 分刻み。`
+    + (viewDate===today ? (ms>=CLOSE ? " 本日の受付は終了しました。" : ` 今日は ${hm(ms)} 以降。`) : "");
   let h = `<tr><th class="room">会議室</th>`;
-  for (let m=OPEN; m<CLOSE; m+=60) h += `<th class="hour" colspan="2">${hm(m)}</th>`;
+  for (let m=OPEN; m<CLOSE; m+=60) h += `<th class="hour" colspan="${60/UNIT}"><div><span>${hm(m)}</span>${m+60===CLOSE?`<span>${hm(CLOSE)}</span>`:""}</div></th>`;
   h += "</tr>";
+  const hiddenId = pop.mode==="edit" ? pop.id : null;
   for (const r of rooms) {
-    h += `<tr><th class="room">${r.name}（${r.cap}名）</th>`;
-    const day = reservations.filter(x=>x.roomId===r.id && x.date===viewDate);
+    h += `<tr class="${rooms.indexOf(r)%2===1?"alt":""}"><th class="room">${r.name}（${r.cap}名）</th>`;
+    const day = reservations.filter(x=>x.roomId===r.id && x.date===viewDate && x.id!==hiddenId);
+    if (sel && sel.draft && sel.roomId===r.id && sel.date===viewDate && sel.end>sel.start) day.push({draft:true, start:sel.start, end:sel.end});
     for (let m=OPEN; m<CLOSE; ) {
       const rv = day.find(x=>x.start===m);
       if (rv) {
-        const span=(rv.end-rv.start)/STEP, mine=rv.empId===who;
-        h += `<td class="${mine?"mine":"busy"}" colspan="${span}" title="${hm(rv.start)}〜${hm(rv.end)} ${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId)}）">${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId).replace("架空","")}）</td>`;
-        m = rv.end;
-      } else if (day.some(x=>x.start<m && x.end>m)) { m += STEP; }
-      else {
-        const past = isPast(viewDate, m);
-        h += `<td class="${past?"past":"free"}${m%60===0?" hr":""}" data-room="${r.id}" data-m="${m}"></td>`;
-        m += STEP;
+        const span=(rv.end-rv.start)/UNIT;
+        if (rv.draft) h += `<td class="draft" colspan="${span}">${hm(rv.start)}〜${hm(rv.end)} 予約中…</td>`;
+        else {
+          const mine=rv.empId===who, label=`${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId).replace("架空","")}）`;
+          h += `<td class="${mine?"mine":"busy"}" data-id="${rv.id}" colspan="${span}" title="${hm(rv.start)}〜${hm(rv.end)} ${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId)}）">${label}</td>`;
+        }
+        m = rv.end; continue;
       }
+      if (day.some(x=>x.start<m && x.end>m)) { m += UNIT; continue; }
+      const len = UNIT;
+      const past = m+len <= ms;
+      h += `<td class="${past?"past":"free"}${m%60===0?" hr":""}" colspan="${len/UNIT}" data-room="${r.id}" data-m="${m}" data-len="${len}"${past?' title="過去の時間は予約できません"':""}></td>`;
+      m += len;
     }
     h += "</tr>";
   }
   $("grid").innerHTML = h;
+  paintSel(); placeNow(); tickClock(); renderCal();
+}
+function paintSel() {
+  document.querySelectorAll("td.sel").forEach(td=>td.classList.remove("sel"));
+  if (!sel || sel.draft) return;
+  document.querySelectorAll(`td.free[data-room="${sel.roomId}"]`).forEach(td => {
+    const m=Number(td.dataset.m), e=m+Number(td.dataset.len);
+    if (m<sel.end && e>sel.start) td.classList.add("sel");
+  });
+}
+function drawVLines() {   // 時刻の縦線（1 時間ごとは太く、30 分ごとは細く）。奥の会議室まで見失わないように
+  const t=$("grid"), rw=t.querySelector("th.room").offsetWidth, w=t.offsetWidth-rw;
+  let h = "";
+  for (let m=OPEN+UNIT; m<CLOSE; m+=UNIT) {
+    const x = rw + (m-OPEN)/(CLOSE-OPEN)*w;
+    h += `<div class="vline ${m%60===0?"h":"m"}" style="left:${x}px;top:${t.offsetTop}px;height:${t.offsetHeight}px"></div>`;
+  }
+  $("vlines").innerHTML = h;
+}
+function placeNow() {
+  drawVLines();
+  const line=$("nowline"), n=nowMin();
+  if (viewDate!==today || n<OPEN || n>=CLOSE) { line.style.display="none"; return; }
+  const t=$("grid"), rw=t.querySelector("th.room").offsetWidth;
+  line.style.display="block";
+  line.style.left = (rw + (n-OPEN)/(CLOSE-OPEN)*(t.offsetWidth-rw)) + "px";
+  line.style.top = t.offsetTop+"px"; line.style.height = t.offsetHeight+"px";
+}
+function flash(id) { const c=document.querySelector(`td[data-id="${id}"]`); if (c) { c.classList.add("flash"); c.scrollIntoView({block:"nearest",inline:"nearest"}); } }
+function tickClock() {   // 今日以外の日を見ているときは、今日の日付も出す
+  const away = viewDate !== today;
+  // 1 つの枠にまとめる。別の日を見ているときは、時刻の右に今日の日付をつなげる（時刻の位置は変わらない）
+  const c = $("clock");
+  c.textContent = away ? `現在 ${hm(nowMin())}　今日 ${shortDate(today)}` : `現在 ${hm(nowMin())}`;
+  c.classList.toggle("away", away);
+}
+function hl(id) {   // カードに重ねたとき、表の予約枠を強調する
+  document.querySelectorAll("td.hl").forEach(t=>t.classList.remove("hl"));
+  if (id) { const t=document.querySelector(`td[data-id="${id}"]`); if (t) t.classList.add("hl"); }
 }
 
-function renderMine() {
-  const list = reservations.filter(x=>x.empId===who && !isPast(x.date, x.end-1))
+/* ---------- 下の欄（自分の予約・みんなの予約） ---------- */
+function renderMine() {   // 自分の今後の予約（カードを押すと、その日にジャンプ）
+  const list = reservations.filter(x=>x.empId===who && !finished(x))
     .sort((a,b)=> a.date===b.date ? a.start-b.start : a.date.localeCompare(b.date));
+  $("tabMine").textContent = `自分（${empName(who)}）の予約（今後）${list.length}件`;   // 誤ログインに気づけるよう名前を出す
   $("mine").innerHTML = list.length ? list.map(x=>`
-    <div class="item"><div><div>${x.date.slice(5).replace("-","/")}(${youbi(x.date)}) ${hm(x.start)}〜${hm(x.end)} ${roomName(x.roomId)}</div>
-    <div class="sub">${esc(x.purpose||"（用件なし）")}</div></div>
-    <div class="btns"><button data-edit="${x.id}">変更</button><button class="danger" data-del="${x.id}">キャンセル</button></div></div>`).join("")
-    : `<div class="empty">予約はまだありません</div>`;
+    <div class="rcard mine jump${x.date===viewDate?" here":""}" data-id="${x.id}" title="押すと ${shortDate(x.date)} にジャンプします">
+      <div class="rtime">${shortDate(x.date)} ${hm(x.start)}〜${hm(x.end)}</div>
+      <div class="rsub">${roomName(x.roomId)} ／ ${esc(x.purpose||"（用件なし）")}</div>
+      ${started(x) ? `<span class="rsub" style="flex:none">進行中</span>`
+        : `<div class="btns"><button data-edit="${x.id}">変更</button><button class="danger" data-del="${x.id}">キャンセル</button></div>`}</div>`).join("")
+    : `<div class="empty">予約はまだありません。<br>上の表の空き枠を押して予約できます。</div>`;
 }
-function renderAll() { renderGrid(); renderMine(); }
+function renderDay() {   // 選んだ日の、みんなの予約（自分の予約も含む）
+  const list = reservations.filter(x=>x.date===viewDate).sort((a,b)=>a.start-b.start||a.roomId-b.roomId);
+  $("tabDay").textContent = `${shortDate(viewDate)} の予約（みんな）${list.length}件`;
+  $("day").innerHTML = list.length ? list.map(x=>`
+    <div class="rcard ${x.empId===who?"mine":"other"}${finished(x)?" done":""}" data-id="${x.id}">
+      <div class="rtime">${hm(x.start)}〜${hm(x.end)}</div>
+      <div class="rsub">${roomName(x.roomId)} ／ ${esc(x.purpose||"（用件なし）")}（${empName(x.empId)}）</div>
+      ${x.empId===who?`<span class="tag" style="margin:0">自分</span>`:""}</div>`).join("")
+    : `<div class="empty">この日の予約はまだありません</div>`;
+}
+function renderAll() { renderGrid(); renderMine(); renderDay(); }
+
+/* ---------- ポップアップ ---------- */
+function slotOpts(el, from, to, selected) {
+  el.innerHTML = "";
+  for (let m=from; m<=to; m+=UNIT) { const o=document.createElement("option"); o.value=m; o.textContent=hm(m); if (m===selected) o.selected=true; el.appendChild(o); }
+}
+function fillEnd(preferred) {
+  const s = Number($("p_start").value);
+  const want = preferred && preferred > s ? preferred : Math.min(s+60, CLOSE);
+  slotOpts($("p_end"), s+UNIT, CLOSE, want);
+}
+function placePop(rect) {
+  const p=$("pop"); p.style.display="block";
+  const w=330, h=p.offsetHeight;
+  const left = Math.min(Math.max(rect.left, 8), window.innerWidth-w-8);
+  let top = rect.bottom + 8;
+  if (top + h > window.innerHeight) top = rect.top - h - 8 >= 0 ? rect.top - h - 8 : Math.max(8, window.innerHeight - h - 8);
+  p.style.left = (left + window.scrollX) + "px"; p.style.top = (top + window.scrollY) + "px";
+}
+function closePop() {
+  if (!pop.mode && !sel) return;
+  $("pop").style.display="none"; pop={mode:null,id:null}; sel=null; renderGrid();
+}
+function syncDraft() {   // 選んだ内容を、表にすぐ仮表示する
+  const date=$("p_date").value;
+  sel = {roomId:Number($("p_room").value), date, start:Number($("p_start").value), end:Number($("p_end").value), draft:true};
+  if (date && date!==viewDate) viewDate = date;
+  renderAll();
+}
+
+function openPop(o, rect) {
+  pop = {mode:o.mode, id:o.id ?? null};
+  const p=$("pop");
+  if (o.mode==="view") {
+    const mine = o.empId===who;
+    p.innerHTML = `
+      <div class="pop-head"><strong>予約の内容</strong><button class="x" id="p_close" aria-label="閉じる">×</button></div>
+      <p class="detail"><span class="big">${hm(o.start)}〜${hm(o.end)}</span><br>${roomName(o.roomId)} ／ ${longDate(o.date)}<br>用件：${esc(o.purpose||"（用件なし）")}<br>予約した人：${empName(o.empId)}</p>
+      ${!mine ? `<div class="note">他の人の予約は変更できません。</div>`
+        : started(o) ? `<div class="note">始まった予約は変更・キャンセルできません。</div>`
+        : `<div class="pbtns"><button class="danger" id="p_del">キャンセルする</button><button class="primary" id="p_edit">変更する</button></div>`}`;
+    placePop(rect);
+    $("p_close").onclick = closePop;
+    if ($("p_edit")) { $("p_edit").onclick = () => openPop({...o, mode:"edit"}, rect); $("p_del").onclick = () => removeRes(o.id); }
+    return;
+  }
+  const isEdit = o.mode==="edit";
+  p.innerHTML = `
+    <div class="pop-head"><strong>${isEdit?"予約を変更する":"予約する"}</strong><button class="x" id="p_close" aria-label="閉じる">×</button></div>
+    <div class="err" id="p_err" role="alert"></div>
+    <div class="prow"><label for="p_room">会議室</label><select id="p_room"></select></div>
+    <div class="prow"><label for="p_date">日付</label><input type="date" id="p_date"></div>
+    <div class="prow"><label for="p_start">時間</label><div class="times"><select id="p_start"></select><span>〜</span><select id="p_end"></select></div></div>
+    <div class="prow"><label for="p_purpose">用件</label><input type="text" id="p_purpose" maxlength="50" placeholder="任意（50 文字まで）"></div>
+    <div class="pbtns"><button id="p_cancel">やめる</button><button class="primary" id="p_submit">${isEdit?"変更を保存":"予約する"}</button></div>`;
+  $("p_room").innerHTML = rooms.map(r=>`<option value="${r.id}">${r.name}（${r.cap}名）</option>`).join("");
+  $("p_room").value = o.roomId; $("p_date").value = o.date;
+  slotOpts($("p_start"), OPEN, CLOSE-UNIT, o.start); fillEnd(o.end);
+  $("p_purpose").value = o.purpose || "";
+  sel = {roomId:o.roomId, date:o.date, start:o.start, end:o.end, draft:true};
+  renderGrid();
+  placePop(rect);
+  $("p_start").onchange = () => { fillEnd(Number($("p_end").value)); syncDraft(); };
+  $("p_end").onchange = $("p_room").onchange = $("p_date").onchange = syncDraft;
+  $("p_close").onclick = $("p_cancel").onclick = closePop;
+  $("p_submit").onclick = submitPop;
+  $("p_purpose").onkeydown = e => { if (e.key==="Enter") submitPop(); };
+  $("p_purpose").focus();
+}
 
 function validate() {
-  const roomId=Number($("room").value), date=$("date").value, s=Number($("start").value), e=Number($("end").value);
+  const roomId=Number($("p_room").value), date=$("p_date").value, s=Number($("p_start").value), e=Number($("p_end").value);
   if (!date) return "日付を選んでください";
   if (!(e > s)) return "終了は開始より後にしてください";
-  if (s < OPEN || e > CLOSE) return "予約できるのは 8:00〜20:00 の間です";
-  if (isPast(date, s)) return "過去の日時は予約できません";
+  if (s < OPEN || e > CLOSE) return `予約できるのは ${hm(OPEN)}〜${hm(CLOSE)} の間です`;
+  if (s < minStart(date)) return date===today ? `今日は ${hm(minStart(date))} 以降から予約できます` : "過去の日時は予約できません";
   if (date > addDays(today, 90)) return "予約できるのは今日から 90 日先までです";
   if (e - s > 4*60) return "1 件の予約は 4 時間までです";
-  const clash = reservations.some(x=>x.id!==editingId && x.roomId===roomId && x.date===date && x.start<e && x.end>s);
-  if (clash) return "その時間はすでに予約があります";
+  if (overlaps(roomId, date, s, e, pop.id)) return "その時間はすでに予約があります";
   return null;
 }
-function resetForm() {
-  editingId = null;
-  $("formTitle").textContent="予約する"; $("submit").textContent="予約する"; $("cancelEdit").style.display="none";
-  setForm(rooms[0].id, viewDate, OPEN+60, null, "");
+function submitPop() {
+  const msg = validate(); $("p_err").textContent = msg || "";
+  if (msg) return;
+  const v = { roomId:Number($("p_room").value), date:$("p_date").value, start:Number($("p_start").value), end:Number($("p_end").value), purpose:$("p_purpose").value.trim() };
+  let id, text;
+  if (pop.mode==="edit") { id=pop.id; Object.assign(find(id), v); text="予約を変更しました"; }
+  else { id=nextId++; reservations.push({id, empId:who, ...v}); text="予約しました"; }
+  viewDate = v.date; $("pop").style.display="none"; pop={mode:null,id:null}; sel=null;
+  renderAll(); flash(id); toast(text);
+}
+function removeRes(id) {
+  if (!confirm("この予約をキャンセルしますか？")) return;
+  reservations = reservations.filter(r=>r.id!==id);
+  $("pop").style.display="none"; pop={mode:null,id:null}; sel=null;
+  renderAll(); toast("予約をキャンセルしました");
 }
 
-$("submit").onclick = () => {
-  $("ok").textContent = "";
-  const msg = validate(); $("err").textContent = msg || "";
-  if (msg) return;
-  const v = { roomId:Number($("room").value), date:$("date").value, start:Number($("start").value), end:Number($("end").value), purpose:$("purpose").value.trim() };
-  if (editingId) { Object.assign(reservations.find(x=>x.id===editingId), v); $("ok").textContent = "予約を変更しました"; }
-  else { reservations.push({id:nextId++, empId:who, ...v}); $("ok").textContent = "予約しました"; }
-  viewDate = v.date; resetForm(); renderAll();
-};
-$("cancelEdit").onclick = () => { $("err").textContent=""; resetForm(); };
-$("grid").onclick = e => {
+/* ---------- 表の操作（クリック・ドラッグ） ---------- */
+$("grid").addEventListener("mousedown", e => {
   const td = e.target.closest("td.free"); if (!td) return;
-  editingId = null; $("formTitle").textContent="予約する"; $("submit").textContent="予約する"; $("cancelEdit").style.display="none";
-  $("err").textContent=""; $("ok").textContent="";
-  const m = Number(td.dataset.m);
-  setForm(Number(td.dataset.room), viewDate, m, Math.min(m+60, CLOSE), "");
-};
+  e.preventDefault();
+  const room=Number(td.dataset.room), a=Number(td.dataset.m), b=a+Number(td.dataset.len);
+  closePop();
+  drag = {room, aStart:a, aEnd:b, lo:a, hi:b};
+  sel = {roomId:room, date:viewDate, start:Math.max(a,minStart(viewDate)), end:b, draft:false}; paintSel();
+});
+$("grid").addEventListener("mouseover", e => {
+  if (!drag) return;
+  const td = e.target.closest("td.free");
+  if (!td || Number(td.dataset.room)!==drag.room) return;
+  const cm=Number(td.dataset.m), ce=cm+Number(td.dataset.len);
+  const lo=Math.min(drag.aStart,cm), hi=Math.max(drag.aEnd,ce);
+  if (overlaps(drag.room, viewDate, lo, hi)) return;
+  drag.lo=lo; drag.hi=hi; sel = {roomId:drag.room, date:viewDate, start:Math.max(lo,minStart(viewDate)), end:hi, draft:false}; paintSel();
+});
+document.addEventListener("mouseup", () => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  const click = d.lo===d.aStart && d.hi===d.aEnd;
+  const start = Math.max(d.lo, minStart(viewDate));
+  const end = click ? maxEnd(d.room, viewDate, start) : d.hi;
+  if (end <= start) { sel=null; paintSel(); return; }
+  sel = {roomId:d.room, date:viewDate, start, end, draft:true}; renderGrid();
+  const cell = document.querySelector("td.draft");
+  openPop({mode:"new", roomId:d.room, date:viewDate, start, end, purpose:""}, cell.getBoundingClientRect());
+});
+$("grid").addEventListener("click", e => {
+  const td = e.target.closest("td.busy, td.mine"); if (!td) return;
+  openPop({mode:"view", ...find(Number(td.dataset.id))}, td.getBoundingClientRect());
+});
+document.addEventListener("mousedown", e => {
+  if ($("pop").style.display==="block" && !$("pop").contains(e.target) && !e.target.closest("td.free")) closePop();
+});
+document.addEventListener("keydown", e => { if (e.key==="Escape") closePop(); });
+
+/* ---------- 下の欄・上のバー ---------- */
 $("mine").onclick = e => {
   const ed = e.target.dataset.edit, del = e.target.dataset.del;
   if (ed) {
-    const x = reservations.find(r=>r.id===Number(ed)); editingId = x.id;
-    $("formTitle").textContent="予約を変更する"; $("submit").textContent="変更を保存"; $("cancelEdit").style.display="";
-    $("err").textContent=""; $("ok").textContent="";
-    setForm(x.roomId, x.date, x.start, x.end, x.purpose);
-    window.scrollTo({top:document.body.scrollHeight, behavior:"smooth"});
+    const x = find(Number(ed)); closePop(); viewDate = x.date; renderAll();
+    const c = document.querySelector(`td[data-id="${x.id}"]`); c.scrollIntoView({block:"nearest",inline:"center"});
+    const rect = c.getBoundingClientRect();
+    openPop({mode:"edit", ...x}, rect);
   }
-  if (del && confirm("この予約をキャンセルしますか？")) {
-    reservations = reservations.filter(r=>r.id!==Number(del));
-    if (editingId===Number(del)) resetForm();
-    $("ok").textContent = "予約をキャンセルしました"; renderAll();
+  if (del) removeRes(Number(del));
+  const card = e.target.closest(".rcard.jump");
+  if (card && !e.target.closest("button")) {   // カードを押すと、その日付へジャンプ
+    const x = find(Number(card.dataset.id));
+    go(x.date); window.scrollTo({top:0, behavior:"smooth"}); flash(x.id);
   }
 };
-$("who").onchange = () => { who = Number($("who").value); resetForm(); $("err").textContent=""; $("ok").textContent=""; renderAll(); };
-$("start").onchange = () => fillEnd(null);
-const go = d => { viewDate = d; renderGrid(); };
+$("day").onclick = e => {   // 一覧のカードを押すと、表の枠を押したときと同じ詳細を出す
+  const c = e.target.closest(".rcard"); if (!c) return;
+  const x = find(Number(c.dataset.id));
+  window.scrollTo(0, 0);
+  const td = document.querySelector(`td[data-id="${x.id}"]`); if (!td) return;
+  flash(x.id); openPop({mode:"view", ...x}, td.getBoundingClientRect());
+};
+$("who").onchange = () => { who = Number($("who").value); closePop(); renderAll(); };
+const go = d => { closePop(); viewDate = d; calY = Number(d.slice(0,4)); calM = Number(d.slice(5,7)); renderAll(); };
 $("prev").onclick = () => go(addDays(viewDate,-1));
 $("next").onclick = () => go(addDays(viewDate,1));
 $("today").onclick = () => go(today);
-$("datePick").onchange = () => { if ($("datePick").value) go($("datePick").value); };
+
+/* ---------- ミニカレンダー（日付を選んでも閉じない。×か外側のクリックで閉じる） ---------- */
+let calY = Number(viewDate.slice(0,4)), calM = Number(viewDate.slice(5,7));
+function renderCal() {
+  if ($("cal").hidden) return;
+  const first = new Date(calY, calM-1, 1), start = new Date(calY, calM-1, 1-first.getDay());
+  let h = `<div class="cal-head"><button id="calPrev" aria-label="前の月">◀</button><div class="cal-title">${calY}年${calM}月</div><button id="calNext" aria-label="次の月">▶</button><span class="spacer"></span><button id="calToday">今日</button><button class="cal-x" id="calX" aria-label="閉じる" title="閉じる">×</button></div><div class="cal-grid">`;
+  "日月火水木金土".split("").forEach((w,i) => h += `<div class="dow${i===0?" sun":i===6?" sat":""}">${w}</div>`);
+  for (let i=0; i<42; i++) {
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const s = ymd(d), dow = d.getDay();
+    const cls = ["day", d.getMonth()!==calM-1?"out":"", s===today?"today":"", s===viewDate?"sel":"", dow===0?"sun":dow===6?"sat":""].filter(Boolean).join(" ");
+    const day = reservations.filter(r=>r.date===s);   // 点: 自分の予約は青、ほかの人の予約は灰色（両方あれば 2 つ）
+    const dots = (day.some(r=>r.empId===who)?`<span class="dot mine"></span>`:"") + (day.some(r=>r.empId!==who)?`<span class="dot other"></span>`:"");
+    h += `<button type="button" class="${cls}" data-d="${s}">${d.getDate()}${dots?`<span class="dots">${dots}</span>`:""}</button>`;
+  }
+  $("cal").innerHTML = h + `</div><div class="cal-legend"><span class="dot mine"></span>自分の予約<span class="dot other"></span>ほかの人の予約</div>`;
+}
+const closeCal = () => { $("cal").hidden = true; };
+$("dateBtn").onclick = () => { if ($("cal").hidden) { calY = Number(viewDate.slice(0,4)); calM = Number(viewDate.slice(5,7)); $("cal").hidden = false; renderCal(); } else closeCal(); };
+$("cal").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id==="calX") return closeCal();
+  if (b.id==="calToday") return go(today);   // 今日へ（カレンダーは開いたまま）
+  if (b.id==="calPrev" || b.id==="calNext") { calM += b.id==="calNext" ? 1 : -1; if (calM<1) { calM=12; calY--; } if (calM>12) { calM=1; calY++; } return renderCal(); }
+  if (b.dataset.d) go(b.dataset.d);   // 選んでも閉じない（表だけ切り替わる）
+};
+document.addEventListener("mousedown", e => { if (!$("cal").hidden && !$("cal").contains(e.target) && !$("dateBtn").contains(e.target)) closeCal(); });
+document.addEventListener("keydown", e => { if (e.key==="Escape") closeCal(); });
+window.addEventListener("resize", placeNow);
+setInterval(() => { if (!drag) renderAll(); }, 30000);
+function hlCards(id) {   // 表の枠にカーソルを重ねたとき、下の一覧のカードの色も変える
+  document.querySelectorAll(".rcard.hl").forEach(c=>c.classList.remove("hl"));
+  if (!id) return;
+  document.querySelectorAll(`.rcard[data-id="${id}"]`).forEach(c => {
+    c.classList.add("hl");
+    const box = c.parentElement;   // 一覧の中でスクロールが必要なら、一覧の中だけ動かす
+    if (box.hidden) return;        // 別のタブにあるときは何もしない
+    if (c.offsetTop < box.scrollTop || c.offsetTop + c.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = c.offsetTop - box.offsetTop - 8;
+  });
+}
+document.addEventListener("mouseover", e => {
+  const c = e.target.closest(".rcard[data-id]"), t = e.target.closest("td[data-id]");
+  hl(c ? c.dataset.id : null);        // 一覧 → 表
+  hlCards(t ? t.dataset.id : null);   // 表 → 一覧
+});
+
+/* ---------- 一覧のタブ・色の説明（？） ---------- */
+function setTab(t) {
+  $("mine").hidden = t!=="mine"; $("day").hidden = t!=="day";
+  [["mine","tabMine"],["day","tabDay"]].forEach(([k,id]) => { $(id).classList.toggle("on", k===t); $(id).setAttribute("aria-selected", k===t); });
+}
+$("tabMine").onclick = () => setTab("mine");
+$("tabDay").onclick = () => setTab("day");
+$("legendBtn").onclick = () => { $("legend").hidden = !$("legend").hidden; };
+document.addEventListener("mousedown", e => { if (!$("legend").hidden && !$("legend").contains(e.target) && !$("legendBtn").contains(e.target)) $("legend").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key==="Escape") $("legend").hidden = true; });
 
 // 初期表示
 $("who").innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
-$("room").innerHTML = rooms.map(r=>`<option value="${r.id}">${r.name}（${r.cap}名）</option>`).join("");
-slotOpts($("start"), OPEN, CLOSE-STEP, OPEN+60);
-resetForm(); renderAll();
+tickClock(); renderAll();
 </script>
 </body>
 </html>
