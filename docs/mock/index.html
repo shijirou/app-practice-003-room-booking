@@ -23,8 +23,24 @@
   .datebar .label { font-weight:bold; font-size:18px; display:inline-block; min-width:182px; }   /* 日付が変わっても右の時刻の位置がずれない */
   .datepick { position:relative; display:inline-flex; align-items:center; gap:8px; margin:0 4px 0 8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
   .datepick:hover { background:#f3f5f7; border-color:var(--blue); }
-  .datepick input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
-  .datepick input::-webkit-calendar-picker-indicator { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
+  .datewrap { position:relative; }
+  #cal { position:absolute; top:calc(100% + 6px); left:8px; z-index:25; width:320px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; box-shadow:0 8px 28px rgba(0,0,0,.25); }
+  #cal[hidden] { display:none; }
+  .cal-head { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+  .cal-head button { padding:2px 10px; }
+  .cal-title { flex:1; text-align:center; font-weight:bold; white-space:nowrap; }
+  .cal-head .cal-x { border:none; background:none; font-size:22px; line-height:1; color:var(--sub); padding:0 6px; }
+  .cal-head .cal-x:hover { color:var(--red); background:none; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; }
+  .cal-grid .dow { font-size:12px; color:var(--sub); padding:2px 0; }
+  .cal-grid .sun { color:var(--red); } .cal-grid .sat { color:var(--blue); }
+  .day { position:relative; border:1px solid transparent; border-radius:6px; background:none; padding:7px 0; font-size:14px; cursor:pointer; }
+  .day:hover { background:#e3eefb; }
+  .day.out { opacity:.4; }
+  .day.today { border-color:var(--blue); }
+  .day.sel, .day.sel:hover { background:var(--blue); color:#fff; opacity:1; }
+  .day .dot { position:absolute; left:50%; bottom:2px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:var(--sub); }
+  .day.sel .dot { background:#fff; }
   .clock { display:inline-flex; align-items:center; gap:8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); font-size:18px; font-weight:bold; }
   .clock[hidden] { display:none; }
   .datebar .spacer { flex:1; }
@@ -106,10 +122,12 @@
       <button id="prev" aria-label="前の日">◀</button>
       <button id="today">今日</button>
       <button id="next" aria-label="次の日">▶</button>
-      <label class="datepick" title="押すとカレンダーから日付を選べます">
-        <span class="label" id="dateLabel"></span><span class="cal" aria-hidden="true">📅</span>
-        <input type="date" id="datePick" aria-label="日付を選ぶ">
-      </label>
+      <div class="datewrap">
+        <button type="button" class="datepick" id="dateBtn" title="押すとカレンダーを開きます" aria-haspopup="dialog">
+          <span class="label" id="dateLabel"></span><span class="cal" aria-hidden="true">📅</span>
+        </button>
+        <div id="cal" role="dialog" aria-label="カレンダー" hidden></div>
+      </div>
       <span class="clock" id="clock"></span>
     </div>
     <div class="infobar">
@@ -205,7 +223,6 @@ function toast(msg) { const t=$("toast"); t.textContent=msg; t.classList.add("sh
 /* ---------- 表（30 分単位） ---------- */
 function renderGrid() {
   $("dateLabel").textContent = longDate(viewDate);
-  $("datePick").value = viewDate;
   const ms = minStart(viewDate), n = nowMin();
   $("hint").textContent = `空き枠を押して予約（ドラッグで長い時間も）。${hm(OPEN)}〜${hm(CLOSE)}・30 分刻み。`
     + (viewDate===today ? (ms>=CLOSE ? " 本日の受付は終了しました。" : ` 今日は ${hm(ms)} 以降。`) : "");
@@ -237,7 +254,7 @@ function renderGrid() {
     h += "</tr>";
   }
   $("grid").innerHTML = h;
-  paintSel(); placeNow(); tickClock();
+  paintSel(); placeNow(); tickClock(); renderCal();
 }
 function paintSel() {
   document.querySelectorAll("td.sel").forEach(td=>td.classList.remove("sel"));
@@ -456,12 +473,36 @@ $("mine").onclick = e => {
 };
 $("day").onclick = e => { const c = e.target.closest(".rcard"); if (c) flash(Number(c.dataset.id)); };
 $("who").onchange = () => { who = Number($("who").value); closePop(); renderAll(); };
-const go = d => { closePop(); viewDate = d; renderAll(); };
+const go = d => { closePop(); viewDate = d; calY = Number(d.slice(0,4)); calM = Number(d.slice(5,7)); renderAll(); };
 $("prev").onclick = () => go(addDays(viewDate,-1));
 $("next").onclick = () => go(addDays(viewDate,1));
 $("today").onclick = () => go(today);
-$("datePick").onclick = () => { try { $("datePick").showPicker(); } catch (e) {} };
-$("datePick").onchange =() => { if ($("datePick").value) go($("datePick").value); };
+
+/* ---------- ミニカレンダー（日付を選んでも閉じない。×か外側のクリックで閉じる） ---------- */
+let calY = Number(viewDate.slice(0,4)), calM = Number(viewDate.slice(5,7));
+function renderCal() {
+  if ($("cal").hidden) return;
+  const first = new Date(calY, calM-1, 1), start = new Date(calY, calM-1, 1-first.getDay());
+  let h = `<div class="cal-head"><button id="calPrev" aria-label="前の月">◀</button><div class="cal-title">${calY}年${calM}月</div><button id="calNext" aria-label="次の月">▶</button><button class="cal-x" id="calX" aria-label="閉じる" title="閉じる">×</button></div><div class="cal-grid">`;
+  "日月火水木金土".split("").forEach((w,i) => h += `<div class="dow${i===0?" sun":i===6?" sat":""}">${w}</div>`);
+  for (let i=0; i<42; i++) {
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const s = ymd(d), dow = d.getDay();
+    const cls = ["day", d.getMonth()!==calM-1?"out":"", s===today?"today":"", s===viewDate?"sel":"", dow===0?"sun":dow===6?"sat":""].filter(Boolean).join(" ");
+    h += `<button type="button" class="${cls}" data-d="${s}">${d.getDate()}${reservations.some(r=>r.date===s)?`<span class="dot"></span>`:""}</button>`;
+  }
+  $("cal").innerHTML = h + `</div>`;
+}
+const closeCal = () => { $("cal").hidden = true; };
+$("dateBtn").onclick = () => { if ($("cal").hidden) { calY = Number(viewDate.slice(0,4)); calM = Number(viewDate.slice(5,7)); $("cal").hidden = false; renderCal(); } else closeCal(); };
+$("cal").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id==="calX") return closeCal();
+  if (b.id==="calPrev" || b.id==="calNext") { calM += b.id==="calNext" ? 1 : -1; if (calM<1) { calM=12; calY--; } if (calM>12) { calM=1; calY++; } return renderCal(); }
+  if (b.dataset.d) go(b.dataset.d);   // 選んでも閉じない（表だけ切り替わる）
+};
+document.addEventListener("mousedown", e => { if (!$("cal").hidden && !$("cal").contains(e.target) && !$("dateBtn").contains(e.target)) closeCal(); });
+document.addEventListener("keydown", e => { if (e.key==="Escape") closeCal(); });
 window.addEventListener("resize", placeNow);
 setInterval(() => { if (!drag) renderAll(); }, 30000);
 document.addEventListener("mouseover", e => { const c = e.target.closest(".rcard[data-id]"); hl(c ? c.dataset.id : null); });
