@@ -20,13 +20,13 @@
   button.danger { color:var(--red); border-color:#e3b5b1; }
   button.danger:hover { background:#fdecea; border-color:var(--red); }
   .datebar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
-  .datebar .label { font-weight:bold; font-size:18px; }
+  .datebar .label { font-weight:bold; font-size:18px; display:inline-block; min-width:182px; }   /* 日付が変わっても右の時刻の位置がずれない */
   .datepick { position:relative; display:inline-flex; align-items:center; gap:8px; margin:0 4px 0 8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
   .datepick:hover { background:#f3f5f7; border-color:var(--blue); }
   .datepick input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
   .datepick input::-webkit-calendar-picker-indicator { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
   .clock { display:inline-flex; align-items:center; gap:8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); font-size:18px; font-weight:bold; }
-  .clock::before { content:"🕒"; font-size:16px; }
+  .clock[hidden] { display:none; }
   .datebar .spacer { flex:1; }
   .gridwrap { overflow-x:auto; position:relative; }
   table { border-collapse:collapse; table-layout:fixed; width:100%; min-width:960px; user-select:none; }
@@ -110,7 +110,7 @@
         <span class="label" id="dateLabel"></span><span class="cal" aria-hidden="true">📅</span>
         <input type="date" id="datePick" aria-label="日付を選ぶ">
       </label>
-      <span class="clock" id="clock"></span>
+      <span class="clock" id="clock"></span><span class="clock away" id="todayChip" hidden></span>
     </div>
     <div class="infobar">
       <p class="hint" id="hint"></p>
@@ -267,9 +267,10 @@ function placeNow() {
 }
 function flash(id) { const c=document.querySelector(`td[data-id="${id}"]`); if (c) { c.classList.add("flash"); c.scrollIntoView({block:"nearest",inline:"nearest"}); } }
 function tickClock() {   // 今日以外の日を見ているときは、今日の日付も出す
-  const away = viewDate !== today, c = $("clock");
-  c.textContent = away ? `今日 ${shortDate(today)}　現在 ${hm(nowMin())}` : `現在 ${hm(nowMin())}`;
-  c.classList.toggle("away", away);
+  const away = viewDate !== today;
+  $("clock").textContent = `現在 ${hm(nowMin())}`;          // 位置は固定
+  $("todayChip").hidden = !away;                              // 別の日を見ているときだけ、右側に今日の日付を出す
+  $("todayChip").textContent = `今日 ${shortDate(today)}`;
 }
 function hl(id) {   // カードに重ねたとき、表の予約枠を強調する
   document.querySelectorAll("td.hl").forEach(t=>t.classList.remove("hl"));
