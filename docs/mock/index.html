@@ -76,9 +76,18 @@
   #nowline::before { content:""; position:absolute; top:-4px; left:-4px; width:10px; height:10px; border-radius:50%; background:var(--red); }
   .infobar { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:8px; }
   .infobar .hint { margin:0; flex:1; white-space:nowrap; }
-  .legend { font-size:13px; color:var(--sub); white-space:nowrap; }
-  .legend span { display:inline-block; width:14px; height:14px; vertical-align:middle; border:1px solid var(--line); border-radius:3px; margin:0 5px 0 16px; }
-  .legend span:first-child { margin-left:0; }
+  .legendwrap { position:relative; }
+  .help { width:28px; height:28px; padding:0; border-radius:50%; font-weight:bold; color:var(--blue); line-height:1; }
+  .legend { position:absolute; right:0; top:calc(100% + 6px); z-index:15; display:flex; flex-direction:column; gap:8px; padding:12px 16px; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.25); font-size:13px; color:var(--text); white-space:nowrap; }
+  .legend[hidden] { display:none; }
+  .legend .li { display:flex; align-items:center; }
+  .legend .li span { display:inline-block; width:16px; height:16px; border:1px solid var(--line); border-radius:3px; margin-right:8px; }
+  .lists { margin-top:14px; }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; border-bottom:1px solid var(--line); }
+  .tab { border:none; border-bottom:3px solid transparent; border-radius:0; background:none; padding:6px 14px; font-size:15px; color:var(--sub); }
+  .tab:hover { background:#f3f5f7; }
+  .tab.on { color:var(--blue); font-weight:bold; border-bottom-color:var(--blue); }
+  .list[hidden] { display:none; }
   .hint { font-size:13px; color:var(--sub); margin:0 0 8px; }
   header.top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   header.top h1 { margin:0; }
@@ -141,26 +150,27 @@
     </div>
     <div class="infobar">
       <p class="hint" id="hint"></p>
-      <div class="legend">
-        <span style="background:#fff"></span>空き
-        <span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約
-        <span style="background:var(--other)"></span>ほかの人の予約
-        <span style="background:var(--hatch)"></span>過去
+      <div class="legendwrap">
+        <button type="button" class="help" id="legendBtn" aria-label="色の説明を見る" title="色の説明">？</button>
+        <div class="legend" id="legend" hidden>
+          <div class="li"><span style="background:#fff"></span>空き</div>
+          <div class="li"><span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約</div>
+          <div class="li"><span style="background:var(--other)"></span>ほかの人の予約</div>
+          <div class="li"><span style="background:var(--hatch)"></span>過去（予約できません）</div>
+        </div>
       </div>
     </div>
     <div class="gridwrap"><table id="grid"></table><div id="vlines"></div><div id="nowline"></div></div>
   </section>
 
-  <div class="cols">
-    <section class="card">
-      <h2 id="mineTitle">自分の予約（今後）</h2>
-      <div id="mine" class="list"></div>
-    </section>
-    <section class="card">
-      <h2 id="dayTitle">選んだ日の予約</h2>
-      <div id="day" class="list"></div>
-    </section>
-  </div>
+  <section class="card lists">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab on" id="tabMine" role="tab" aria-selected="true"></button>
+      <button type="button" class="tab" id="tabDay" role="tab" aria-selected="false"></button>
+    </div>
+    <div id="mine" class="list"></div>
+    <div id="day" class="list" hidden></div>
+  </section>
 
   <footer>画面の見た目と操作を確認するためのモックです（DB・API なし。重複や時間の検証は画面の中だけで動き、再読み込みで元に戻ります）。社員・会議室はすべて架空です。</footer>
 </div>
@@ -308,7 +318,7 @@ function hl(id) {   // カードに重ねたとき、表の予約枠を強調す
 function renderMine() {   // 自分の今後の予約（カードを押すと、その日にジャンプ）
   const list = reservations.filter(x=>x.empId===who && !finished(x))
     .sort((a,b)=> a.date===b.date ? a.start-b.start : a.date.localeCompare(b.date));
-  $("mineTitle").textContent = `自分（${empName(who)}）の予約（今後）`;   // 誤ログインに気づけるよう名前を出す
+  $("tabMine").textContent = `自分（${empName(who)}）の予約（今後）${list.length}件`;   // 誤ログインに気づけるよう名前を出す
   $("mine").innerHTML = list.length ? list.map(x=>`
     <div class="rcard mine jump${x.date===viewDate?" here":""}" data-id="${x.id}" title="押すと ${shortDate(x.date)} にジャンプします">
       <div class="rtime">${shortDate(x.date)} ${hm(x.start)}〜${hm(x.end)}</div>
@@ -318,8 +328,8 @@ function renderMine() {   // 自分の今後の予約（カードを押すと、
     : `<div class="empty">予約はまだありません。<br>上の表の空き枠を押して予約できます。</div>`;
 }
 function renderDay() {   // 選んだ日の、みんなの予約（自分の予約も含む）
-  $("dayTitle").textContent = `${shortDate(viewDate)} の予約（みんな）`;
   const list = reservations.filter(x=>x.date===viewDate).sort((a,b)=>a.start-b.start||a.roomId-b.roomId);
+  $("tabDay").textContent = `${shortDate(viewDate)} の予約（みんな）${list.length}件`;
   $("day").innerHTML = list.length ? list.map(x=>`
     <div class="rcard ${x.empId===who?"mine":"other"}${finished(x)?" done":""}" data-id="${x.id}">
       <div class="rtime">${hm(x.start)}〜${hm(x.end)}</div>
@@ -529,6 +539,7 @@ function hlCards(id) {   // 表の枠にカーソルを重ねたとき、下の�
   document.querySelectorAll(`.rcard[data-id="${id}"]`).forEach(c => {
     c.classList.add("hl");
     const box = c.parentElement;   // 一覧の中でスクロールが必要なら、一覧の中だけ動かす
+    if (box.hidden) return;        // 別のタブにあるときは何もしない
     if (c.offsetTop < box.scrollTop || c.offsetTop + c.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = c.offsetTop - box.offsetTop - 8;
   });
 }
@@ -537,6 +548,17 @@ document.addEventListener("mouseover", e => {
   hl(c ? c.dataset.id : null);        // 一覧 → 表
   hlCards(t ? t.dataset.id : null);   // 表 → 一覧
 });
+
+/* ---------- 一覧のタブ・色の説明（？） ---------- */
+function setTab(t) {
+  $("mine").hidden = t!=="mine"; $("day").hidden = t!=="day";
+  [["mine","tabMine"],["day","tabDay"]].forEach(([k,id]) => { $(id).classList.toggle("on", k===t); $(id).setAttribute("aria-selected", k===t); });
+}
+$("tabMine").onclick = () => setTab("mine");
+$("tabDay").onclick = () => setTab("day");
+$("legendBtn").onclick = () => { $("legend").hidden = !$("legend").hidden; };
+document.addEventListener("mousedown", e => { if (!$("legend").hidden && !$("legend").contains(e.target) && !$("legendBtn").contains(e.target)) $("legend").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key==="Escape") $("legend").hidden = true; });
 
 // 初期表示
 $("who").innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
