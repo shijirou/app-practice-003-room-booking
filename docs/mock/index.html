@@ -9,8 +9,7 @@
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:"Yu Gothic UI","Meiryo",sans-serif; font-size:15px; }
   .wrap { max-width:1280px; margin:0 auto; padding:16px; }
-  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-  h1 { font-size:20px; margin:0; }
+  h1 { font-size:20px; margin:0 0 12px; }
   h2 { font-size:16px; margin:0 0 10px; }
   .card { background:var(--card); border-radius:8px; padding:14px; box-shadow:0 1px 2px rgba(0,0,0,.12); }
   select, input[type=text], input[type=date] { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; }
@@ -20,22 +19,23 @@
   button.primary:hover { background:#094b8f; }
   button.danger { color:var(--red); border-color:#e3b5b1; }
   button.danger:hover { background:#fdecea; border-color:var(--red); }
-  .who { color:var(--sub); font-size:14px; }
-  .layout { display:grid; grid-template-columns:1fr 300px; gap:14px; align-items:start; }
   .datebar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
-  .datebar .label { font-weight:bold; font-size:18px; margin:0 8px; }
+  .datebar .label { font-weight:bold; font-size:18px; margin:0 4px 0 8px; }
+  .clock { background:#eef3fa; color:var(--blue); border-radius:999px; padding:3px 12px; font-size:14px; font-weight:bold; }
   .datebar .spacer { flex:1; }
   .gridwrap { overflow-x:auto; position:relative; }
-  table { border-collapse:collapse; table-layout:fixed; width:100%; min-width:900px; user-select:none; }
+  table { border-collapse:collapse; table-layout:fixed; width:100%; min-width:960px; user-select:none; }
   th, td { border:1px solid var(--soft); height:44px; padding:0; text-align:center; font-size:13px; }
   th.room { width:150px; white-space:nowrap; text-align:left; padding:0 10px; background:#f3f5f7; border-color:var(--line); }
-  th.hour { background:#f3f5f7; color:var(--sub); font-weight:normal; text-align:left; padding-left:6px; border-color:var(--line); }
+  th.hour { background:#f3f5f7; color:var(--sub); font-weight:normal; padding:0 6px; border-color:var(--line); }
+  th.hour div { display:flex; justify-content:space-between; }
   td.hr { border-left-color:var(--line); }
   td.free { background:#fff; cursor:pointer; }
   td.free:hover::after { content:"＋"; color:var(--blue); font-weight:bold; }
   td.free:hover { background:#e3eefb; }
   td.sel, td.sel:hover { background:#b9d5f5; }
   td.past { background:var(--hatch); cursor:not-allowed; }
+  td.draft { background:#dbe9fb; border:2px dashed var(--blue); color:var(--blue); font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; }
   td.busy, td.mine { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; border-color:#fff; cursor:pointer; }
   td.busy { background:var(--other); color:#2b3342; }
   td.busy:hover { background:#bcc6da; }
@@ -49,15 +49,17 @@
   .legend span { display:inline-block; width:14px; height:14px; vertical-align:middle; border:1px solid var(--line); border-radius:3px; margin:0 5px 0 16px; }
   .legend span:first-child { margin-left:0; }
   .hint { font-size:13px; color:var(--sub); margin:0 0 8px; }
+  .loginbar { display:flex; align-items:center; gap:8px; margin:16px 0 10px; color:var(--sub); font-size:14px; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
   .item { border-bottom:1px solid #e6e9ed; padding:10px 0; }
   .item:last-child { border-bottom:none; }
-  .item .sub { color:var(--sub); font-size:13px; margin:2px 0 8px; }
-  .item .btns { display:flex; gap:8px; }
+  .item.done { opacity:.55; }
+  .item .sub { color:var(--sub); font-size:13px; margin:2px 0; }
+  .item .btns { display:flex; gap:8px; margin-top:6px; }
   .item .btns button { padding:3px 10px; font-size:13px; }
   .empty { color:var(--sub); padding:6px 0; }
   .err { color:var(--red); background:#fdecea; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:14px; }
   .err:empty { display:none; }
-  /* ポップアップ */
   #pop { display:none; position:absolute; z-index:20; width:330px; background:#fff; border-radius:10px; padding:14px; box-shadow:0 8px 28px rgba(0,0,0,.25); border:1px solid var(--line); }
   .pop-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
   .pop-head .x { border:none; background:none; font-size:20px; line-height:1; padding:0 4px; color:var(--sub); }
@@ -68,6 +70,7 @@
   .pbtns { display:flex; justify-content:flex-end; gap:8px; margin-top:4px; }
   .detail { margin:0 0 12px; line-height:1.7; }
   .detail .big { font-size:16px; font-weight:bold; }
+  .note { color:var(--sub); font-size:13px; }
   #toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#1f2933; color:#fff; padding:10px 18px; border-radius:8px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .2s; z-index:30; }
   #toast.show { opacity:1; }
   footer { margin-top:14px; font-size:12px; color:var(--sub); }
@@ -75,35 +78,38 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>会議室予約</h1>
-    <label class="who">ログイン中（仮） <select id="who"></select></label>
-  </header>
+  <h1>会議室予約</h1>
 
-  <div class="layout">
+  <section class="card">
+    <div class="datebar">
+      <button id="prev" aria-label="前の日">◀</button>
+      <button id="today">今日</button>
+      <button id="next" aria-label="次の日">▶</button>
+      <span class="label" id="dateLabel"></span>
+      <span class="clock" id="clock"></span>
+      <span class="spacer"></span>
+      <input type="date" id="datePick" aria-label="日付を選ぶ">
+    </div>
+    <p class="hint" id="hint"></p>
+    <div class="gridwrap"><table id="grid"></table><div id="nowline"></div></div>
+    <div class="legend">
+      <span style="background:#fff"></span>空き
+      <span style="background:var(--other)"></span>ほかの人の予約
+      <span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約
+      <span style="background:var(--hatch)"></span>過去（予約できません）
+    </div>
+  </section>
+
+  <div class="loginbar">ログイン中（仮）<select id="who"></select></div>
+  <div class="cols">
     <section class="card">
-      <div class="datebar">
-        <button id="prev" aria-label="前の日">◀</button>
-        <button id="today">今日</button>
-        <button id="next" aria-label="次の日">▶</button>
-        <span class="label" id="dateLabel"></span>
-        <span class="spacer"></span>
-        <input type="date" id="datePick" aria-label="日付を選ぶ">
-      </div>
-      <p class="hint">空いている枠を押すと予約できます。ドラッグすると長い時間をまとめて選べます。</p>
-      <div class="gridwrap" id="gridwrap"><table id="grid"></table><div id="nowline"></div></div>
-      <div class="legend">
-        <span style="background:#fff"></span>空き
-        <span style="background:var(--other)"></span>ほかの人の予約
-        <span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約
-        <span style="background:var(--hatch)"></span>過去（予約できません）
-      </div>
-    </section>
-
-    <aside class="card">
       <h2>自分の予約</h2>
       <div id="mine"></div>
-    </aside>
+    </section>
+    <section class="card">
+      <h2 id="othersTitle">みんなの予約</h2>
+      <div id="others"></div>
+    </section>
   </div>
 
   <footer>画面の見た目と操作を確認するためのモックです（DB・API なし。重複や時間の検証は画面の中だけで動き、再読み込みで元に戻ります）。社員・会議室はすべて架空です。</footer>
@@ -113,7 +119,7 @@
 <div id="toast" role="status"></div>
 
 <script>
-const OPEN = 8*60, CLOSE = 20*60, STEP = 30;
+const OPEN = 8*60, CLOSE = 20*60, UNIT = 15;
 const employees = [{id:1,name:"田中架空"},{id:2,name:"佐藤架空"},{id:3,name:"鈴木架空"},{id:4,name:"高橋架空"},{id:5,name:"伊藤架空"},{id:6,name:"渡辺架空"}];
 const rooms = [{id:1,name:"会議室A",cap:4},{id:2,name:"会議室B",cap:6},{id:3,name:"会議室C",cap:10},{id:4,name:"商談ブース",cap:2}];
 const esc = t => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -125,6 +131,11 @@ const nowMin = () => { const n=new Date(); return n.getHours()*60+n.getMinutes()
 const today = ymd(new Date());
 const addDays = (s,n) => { const d=new Date(s+"T00:00:00"); d.setDate(d.getDate()+n); return ymd(d); };
 const longDate = s => { const [y,m,d]=s.split("-").map(Number); return `${y}年${m}月${d}日（${youbi(s)}）`; };
+const shortDate = s => `${Number(s.slice(5,7))}/${Number(s.slice(8))}(${youbi(s)})`;
+// 予約を始められる最も早い時刻（今日は、今の時刻を 15 分単位で切り上げ）
+const minStart = date => date < today ? Infinity : date === today ? Math.ceil(nowMin()/UNIT)*UNIT : 0;
+const finished = x => x.date < today || (x.date === today && x.end <= nowMin());
+const started = x => x.date < today || (x.date === today && x.start <= nowMin());
 
 let nextId = 100;
 let reservations = [
@@ -134,40 +145,50 @@ let reservations = [
   {id:4,roomId:4,empId:1,date:addDays(today,2),start:10*60,end:11*60,purpose:"オンライン商談"},
   {id:5,roomId:1,empId:3,date:addDays(today,1),start:14*60,end:15*60,purpose:"面談"},
   {id:6,roomId:2,empId:5,date:addDays(today,1),start:10*60,end:12*60,purpose:"採用面接"},
+  {id:7,roomId:4,empId:6,date:addDays(today,1),start:9*60+15,end:9*60+45,purpose:"電話会議"},
 ];
 let who = 1, viewDate = today, sel = null, drag = null, pop = {mode:null,id:null};
 const $ = id => document.getElementById(id);
 const empName = id => employees.find(e=>e.id===id).name;
 const roomName = id => rooms.find(r=>r.id===id).name;
 const find = id => reservations.find(r=>r.id===id);
-const isPast = (date, startMin) => date < today || (date === today && startMin < nowMin());
-const freeCell = (room, m) => document.querySelector(`td.free[data-room="${room}"][data-m="${m}"]`);
+const overlaps = (room,date,lo,hi,exceptId) => reservations.some(x=>x.id!==exceptId && x.roomId===room && x.date===date && x.start<hi && x.end>lo);
+// その開始時刻から、最大 1 時間（次の予約・閉館まで）
+const maxEnd = (room,date,start) => Math.min(CLOSE, start+60, ...reservations.filter(x=>x.roomId===room && x.date===date && x.start>=start).map(x=>x.start));
 
 function toast(msg) { const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("show"), 2500); }
 
-/* ---------- グリッド ---------- */
+/* ---------- 表（15 分単位。空きは 30 分のかたまりで表示） ---------- */
 function renderGrid() {
   $("dateLabel").textContent = longDate(viewDate);
   $("datePick").value = viewDate;
+  const ms = minStart(viewDate), n = nowMin();
+  $("hint").textContent = `空いている枠を押すと予約できます（ドラッグで長い時間をまとめて選べます）。予約できる時間は ${hm(OPEN)}〜${hm(CLOSE)}、時刻は 15 分刻みで選べます。`
+    + (viewDate===today ? (ms>=CLOSE ? " 本日の受付は終了しました。" : ` 今日は ${hm(ms)} 以降から予約できます。`) : "");
   let h = `<tr><th class="room">会議室</th>`;
-  for (let m=OPEN; m<CLOSE; m+=60) h += `<th class="hour" colspan="2">${hm(m)}</th>`;
+  for (let m=OPEN; m<CLOSE; m+=60) h += `<th class="hour" colspan="4"><div><span>${hm(m)}</span>${m+60===CLOSE?`<span>${hm(CLOSE)}</span>`:""}</div></th>`;
   h += "</tr>";
+  const hiddenId = pop.mode==="edit" ? pop.id : null;
   for (const r of rooms) {
     h += `<tr><th class="room">${r.name}（${r.cap}名）</th>`;
-    const day = reservations.filter(x=>x.roomId===r.id && x.date===viewDate);
+    const day = reservations.filter(x=>x.roomId===r.id && x.date===viewDate && x.id!==hiddenId);
+    if (sel && sel.draft && sel.roomId===r.id && sel.date===viewDate && sel.end>sel.start) day.push({draft:true, start:sel.start, end:sel.end});
     for (let m=OPEN; m<CLOSE; ) {
       const rv = day.find(x=>x.start===m);
       if (rv) {
-        const span=(rv.end-rv.start)/STEP, mine=rv.empId===who;
-        const label = `${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId).replace("架空","")}）`;
-        h += `<td class="${mine?"mine":"busy"}" data-id="${rv.id}" colspan="${span}" title="${hm(rv.start)}〜${hm(rv.end)} ${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId)}）">${label}</td>`;
-        m = rv.end;
-      } else if (day.some(x=>x.start<m && x.end>m)) { m += STEP; }
-      else {
-        const past = isPast(viewDate, m);
-        h += `<td class="${past?"past":"free"}${m%60===0?" hr":""}" data-room="${r.id}" data-m="${m}"${past?' title="過去の時間は予約できません"':""}></td>`;
-        m += STEP;
+        const span=(rv.end-rv.start)/UNIT;
+        if (rv.draft) h += `<td class="draft" colspan="${span}">${hm(rv.start)}〜${hm(rv.end)} 予約中…</td>`;
+        else {
+          const mine=rv.empId===who, label=`${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId).replace("架空","")}）`;
+          h += `<td class="${mine?"mine":"busy"}" data-id="${rv.id}" colspan="${span}" title="${hm(rv.start)}〜${hm(rv.end)} ${esc(rv.purpose||"（用件なし）")}（${empName(rv.empId)}）">${label}</td>`;
+        }
+        m = rv.end; continue;
       }
+      if (day.some(x=>x.start<m && x.end>m)) { m += UNIT; continue; }
+      const len = (m%30===0 && m+30<=CLOSE && !day.some(x=>x.start>m && x.start<m+30)) ? 30 : 15;
+      const past = m+len <= ms;
+      h += `<td class="${past?"past":"free"}${m%60===0?" hr":""}" colspan="${len/UNIT}" data-room="${r.id}" data-m="${m}" data-len="${len}"${past?' title="過去の時間は予約できません"':""}></td>`;
+      m += len;
     }
     h += "</tr>";
   }
@@ -176,8 +197,11 @@ function renderGrid() {
 }
 function paintSel() {
   document.querySelectorAll("td.sel").forEach(td=>td.classList.remove("sel"));
-  if (!sel) return;
-  for (let m=sel.start; m<sel.end; m+=STEP) { const c=freeCell(sel.roomId,m); if (c) c.classList.add("sel"); }
+  if (!sel || sel.draft) return;
+  document.querySelectorAll(`td.free[data-room="${sel.roomId}"]`).forEach(td => {
+    const m=Number(td.dataset.m), e=m+Number(td.dataset.len);
+    if (m<sel.end && e>sel.start) td.classList.add("sel");
+  });
 }
 function placeNow() {
   const line=$("nowline"), n=nowMin();
@@ -188,38 +212,57 @@ function placeNow() {
   line.style.top = t.offsetTop+"px"; line.style.height = t.offsetHeight+"px";
 }
 function flash(id) { const c=document.querySelector(`td[data-id="${id}"]`); if (c) { c.classList.add("flash"); c.scrollIntoView({block:"nearest",inline:"nearest"}); } }
+function tickClock() { $("clock").textContent = `現在 ${hm(nowMin())}`; }
 
-/* ---------- 自分の予約（右の欄） ---------- */
+/* ---------- 下の欄（自分の予約・みんなの予約） ---------- */
 function renderMine() {
-  const list = reservations.filter(x=>x.empId===who && !isPast(x.date, x.end-1))
+  const list = reservations.filter(x=>x.empId===who && !finished(x))
     .sort((a,b)=> a.date===b.date ? a.start-b.start : a.date.localeCompare(b.date));
   $("mine").innerHTML = list.length ? list.map(x=>`
-    <div class="item"><div><b>${x.date.slice(5).replace("-","/")}(${youbi(x.date)}) ${hm(x.start)}〜${hm(x.end)}</b></div>
+    <div class="item"><div><b>${shortDate(x.date)} ${hm(x.start)}〜${hm(x.end)}</b></div>
     <div class="sub">${roomName(x.roomId)} ／ ${esc(x.purpose||"（用件なし）")}</div>
-    <div class="btns"><button data-edit="${x.id}">変更</button><button class="danger" data-del="${x.id}">キャンセル</button></div></div>`).join("")
-    : `<div class="empty">予約はまだありません。<br>左の表の空き枠を押して予約できます。</div>`;
+    ${started(x) ? `<div class="sub">進行中の予約は変更・キャンセルできません</div>`
+      : `<div class="btns"><button data-edit="${x.id}">変更</button><button class="danger" data-del="${x.id}">キャンセル</button></div>`}</div>`).join("")
+    : `<div class="empty">予約はまだありません。<br>上の表の空き枠を押して予約できます。</div>`;
 }
-function renderAll() { renderGrid(); renderMine(); }
+function renderOthers() {
+  $("othersTitle").textContent = `${shortDate(viewDate)} のほかの人の予約`;
+  const list = reservations.filter(x=>x.empId!==who && x.date===viewDate).sort((a,b)=>a.start-b.start);
+  $("others").innerHTML = list.length ? list.map(x=>`
+    <div class="item${finished(x)?" done":""}"><div><b>${hm(x.start)}〜${hm(x.end)}</b>　${roomName(x.roomId)}</div>
+    <div class="sub">${esc(x.purpose||"（用件なし）")}（${empName(x.empId)}）</div></div>`).join("")
+    : `<div class="empty">この日、ほかの人の予約はありません</div>`;
+}
+function renderAll() { renderGrid(); renderMine(); renderOthers(); }
 
 /* ---------- ポップアップ ---------- */
-function slotOpts(sel, from, to, selected) {
-  sel.innerHTML = "";
-  for (let m=from; m<=to; m+=STEP) { const o=document.createElement("option"); o.value=m; o.textContent=hm(m); if (m===selected) o.selected=true; sel.appendChild(o); }
+function slotOpts(el, from, to, selected) {
+  el.innerHTML = "";
+  for (let m=from; m<=to; m+=UNIT) { const o=document.createElement("option"); o.value=m; o.textContent=hm(m); if (m===selected) o.selected=true; el.appendChild(o); }
 }
 function fillEnd(preferred) {
   const s = Number($("p_start").value);
   const want = preferred && preferred > s ? preferred : Math.min(s+60, CLOSE);
-  slotOpts($("p_end"), s+STEP, CLOSE, want);
+  slotOpts($("p_end"), s+UNIT, CLOSE, want);
 }
 function placePop(rect) {
   const p=$("pop"); p.style.display="block";
   const w=330, h=p.offsetHeight;
-  let left = Math.min(Math.max(rect.left, 8), window.innerWidth-w-8);
+  const left = Math.min(Math.max(rect.left, 8), window.innerWidth-w-8);
   let top = rect.bottom + 8;
   if (top + h > window.innerHeight) top = rect.top - h - 8 >= 0 ? rect.top - h - 8 : Math.max(8, window.innerHeight - h - 8);
   p.style.left = (left + window.scrollX) + "px"; p.style.top = (top + window.scrollY) + "px";
 }
-function closePop() { $("pop").style.display="none"; pop={mode:null,id:null}; if (sel) { sel=null; paintSel(); } }
+function closePop() {
+  if (!pop.mode && !sel) return;
+  $("pop").style.display="none"; pop={mode:null,id:null}; sel=null; renderGrid();
+}
+function syncDraft() {   // 15 分刻みで選んだ内容を、表にすぐ仮表示する
+  const date=$("p_date").value;
+  sel = {roomId:Number($("p_room").value), date, start:Number($("p_start").value), end:Number($("p_end").value), draft:true};
+  if (date && date!==viewDate) viewDate = date;
+  renderAll();
+}
 
 function openPop(o, rect) {
   pop = {mode:o.mode, id:o.id ?? null};
@@ -229,11 +272,12 @@ function openPop(o, rect) {
     p.innerHTML = `
       <div class="pop-head"><strong>予約の内容</strong><button class="x" id="p_close" aria-label="閉じる">×</button></div>
       <p class="detail"><span class="big">${hm(o.start)}〜${hm(o.end)}</span><br>${roomName(o.roomId)} ／ ${longDate(o.date)}<br>用件：${esc(o.purpose||"（用件なし）")}<br>予約した人：${empName(o.empId)}</p>
-      ${mine ? `<div class="pbtns"><button class="danger" id="p_del">キャンセルする</button><button class="primary" id="p_edit">変更する</button></div>`
-             : `<div class="sub" style="color:var(--sub);font-size:13px">他の人の予約は変更できません。</div>`}`;
+      ${!mine ? `<div class="note">他の人の予約は変更できません。</div>`
+        : started(o) ? `<div class="note">始まった予約は変更・キャンセルできません。</div>`
+        : `<div class="pbtns"><button class="danger" id="p_del">キャンセルする</button><button class="primary" id="p_edit">変更する</button></div>`}`;
     placePop(rect);
     $("p_close").onclick = closePop;
-    if (mine) { $("p_edit").onclick = () => openPop({...o, mode:"edit"}, rect); $("p_del").onclick = () => removeRes(o.id); }
+    if ($("p_edit")) { $("p_edit").onclick = () => openPop({...o, mode:"edit"}, rect); $("p_del").onclick = () => removeRes(o.id); }
     return;
   }
   const isEdit = o.mode==="edit";
@@ -247,10 +291,13 @@ function openPop(o, rect) {
     <div class="pbtns"><button id="p_cancel">やめる</button><button class="primary" id="p_submit">${isEdit?"変更を保存":"予約する"}</button></div>`;
   $("p_room").innerHTML = rooms.map(r=>`<option value="${r.id}">${r.name}（${r.cap}名）</option>`).join("");
   $("p_room").value = o.roomId; $("p_date").value = o.date;
-  slotOpts($("p_start"), OPEN, CLOSE-STEP, o.start); fillEnd(o.end);
+  slotOpts($("p_start"), OPEN, CLOSE-UNIT, o.start); fillEnd(o.end);
   $("p_purpose").value = o.purpose || "";
+  sel = {roomId:o.roomId, date:o.date, start:o.start, end:o.end, draft:true};
+  renderGrid();
   placePop(rect);
-  $("p_start").onchange = () => fillEnd(Number($("p_end").value));
+  $("p_start").onchange = () => { fillEnd(Number($("p_end").value)); syncDraft(); };
+  $("p_end").onchange = $("p_room").onchange = $("p_date").onchange = syncDraft;
   $("p_close").onclick = $("p_cancel").onclick = closePop;
   $("p_submit").onclick = submitPop;
   $("p_purpose").onkeydown = e => { if (e.key==="Enter") submitPop(); };
@@ -261,12 +308,11 @@ function validate() {
   const roomId=Number($("p_room").value), date=$("p_date").value, s=Number($("p_start").value), e=Number($("p_end").value);
   if (!date) return "日付を選んでください";
   if (!(e > s)) return "終了は開始より後にしてください";
-  if (s < OPEN || e > CLOSE) return "予約できるのは 8:00〜20:00 の間です";
-  if (isPast(date, s)) return "過去の日時は予約できません";
+  if (s < OPEN || e > CLOSE) return `予約できるのは ${hm(OPEN)}〜${hm(CLOSE)} の間です`;
+  if (s < minStart(date)) return date===today ? `今日は ${hm(minStart(date))} 以降から予約できます` : "過去の日時は予約できません";
   if (date > addDays(today, 90)) return "予約できるのは今日から 90 日先までです";
   if (e - s > 4*60) return "1 件の予約は 4 時間までです";
-  const clash = reservations.some(x=>x.id!==pop.id && x.roomId===roomId && x.date===date && x.start<e && x.end>s);
-  if (clash) return "その時間はすでに予約があります";
+  if (overlaps(roomId, date, s, e, pop.id)) return "その時間はすでに予約があります";
   return null;
 }
 function submitPop() {
@@ -276,37 +322,44 @@ function submitPop() {
   let id, text;
   if (pop.mode==="edit") { id=pop.id; Object.assign(find(id), v); text="予約を変更しました"; }
   else { id=nextId++; reservations.push({id, empId:who, ...v}); text="予約しました"; }
-  viewDate = v.date; closePop(); renderAll(); flash(id); toast(text);
+  viewDate = v.date; $("pop").style.display="none"; pop={mode:null,id:null}; sel=null;
+  renderAll(); flash(id); toast(text);
 }
 function removeRes(id) {
   if (!confirm("この予約をキャンセルしますか？")) return;
   reservations = reservations.filter(r=>r.id!==id);
-  closePop(); renderAll(); toast("予約をキャンセルしました");
+  $("pop").style.display="none"; pop={mode:null,id:null}; sel=null;
+  renderAll(); toast("予約をキャンセルしました");
 }
 
-/* ---------- グリッドの操作（クリック・ドラッグ） ---------- */
+/* ---------- 表の操作（クリック・ドラッグ） ---------- */
 $("grid").addEventListener("mousedown", e => {
   const td = e.target.closest("td.free"); if (!td) return;
-  e.preventDefault(); closePop();
-  const m = Number(td.dataset.m);
-  drag = {room:Number(td.dataset.room), a:m, b:m};
-  sel = {roomId:drag.room, start:m, end:m+STEP}; paintSel();
+  e.preventDefault();
+  const room=Number(td.dataset.room), a=Number(td.dataset.m), b=a+Number(td.dataset.len);
+  closePop();
+  drag = {room, aStart:a, aEnd:b, lo:a, hi:b};
+  sel = {roomId:room, date:viewDate, start:Math.max(a,minStart(viewDate)), end:b, draft:false}; paintSel();
 });
 $("grid").addEventListener("mouseover", e => {
   if (!drag) return;
   const td = e.target.closest("td.free");
   if (!td || Number(td.dataset.room)!==drag.room) return;
-  const m = Number(td.dataset.m), lo=Math.min(drag.a,m), hi=Math.max(drag.a,m);
-  for (let x=lo; x<=hi; x+=STEP) if (!freeCell(drag.room,x)) return;
-  drag.b = m; sel = {roomId:drag.room, start:lo, end:hi+STEP}; paintSel();
+  const cm=Number(td.dataset.m), ce=cm+Number(td.dataset.len);
+  const lo=Math.min(drag.aStart,cm), hi=Math.max(drag.aEnd,ce);
+  if (overlaps(drag.room, viewDate, lo, hi)) return;
+  drag.lo=lo; drag.hi=hi; sel = {roomId:drag.room, date:viewDate, start:Math.max(lo,minStart(viewDate)), end:hi, draft:false}; paintSel();
 });
 document.addEventListener("mouseup", () => {
   if (!drag) return;
   const d = drag; drag = null;
-  let {start, end} = sel;
-  if (d.a===d.b) { end = start; while (end < start+60 && end < CLOSE && freeCell(d.room,end)) end += STEP; }
-  sel = {roomId:d.room, start, end}; paintSel();
-  openPop({mode:"new", roomId:d.room, date:viewDate, start, end, purpose:""}, freeCell(d.room,start).getBoundingClientRect());
+  const click = d.lo===d.aStart && d.hi===d.aEnd;
+  const start = Math.max(d.lo, minStart(viewDate));
+  const end = click ? maxEnd(d.room, viewDate, start) : d.hi;
+  if (end <= start) { sel=null; paintSel(); return; }
+  sel = {roomId:d.room, date:viewDate, start, end, draft:true}; renderGrid();
+  const cell = document.querySelector("td.draft");
+  openPop({mode:"new", roomId:d.room, date:viewDate, start, end, purpose:""}, cell.getBoundingClientRect());
 });
 $("grid").addEventListener("click", e => {
   const td = e.target.closest("td.busy, td.mine"); if (!td) return;
@@ -317,27 +370,29 @@ document.addEventListener("mousedown", e => {
 });
 document.addEventListener("keydown", e => { if (e.key==="Escape") closePop(); });
 
-/* ---------- 右の欄・上のバー ---------- */
+/* ---------- 下の欄・上のバー ---------- */
 $("mine").onclick = e => {
   const ed = e.target.dataset.edit, del = e.target.dataset.del;
   if (ed) {
-    const x = find(Number(ed)); closePop(); viewDate = x.date; renderGrid();
+    const x = find(Number(ed)); closePop(); viewDate = x.date; renderAll();
     const c = document.querySelector(`td[data-id="${x.id}"]`); c.scrollIntoView({block:"nearest",inline:"center"});
-    openPop({mode:"edit", ...x}, c.getBoundingClientRect()); flash(x.id);
+    const rect = c.getBoundingClientRect();
+    openPop({mode:"edit", ...x}, rect);
   }
   if (del) removeRes(Number(del));
 };
 $("who").onchange = () => { who = Number($("who").value); closePop(); renderAll(); };
-const go = d => { closePop(); viewDate = d; renderGrid(); };
+const go = d => { closePop(); viewDate = d; renderAll(); };
 $("prev").onclick = () => go(addDays(viewDate,-1));
 $("next").onclick = () => go(addDays(viewDate,1));
 $("today").onclick = () => go(today);
 $("datePick").onchange = () => { if ($("datePick").value) go($("datePick").value); };
 window.addEventListener("resize", placeNow);
+setInterval(() => { tickClock(); if (!drag) { renderGrid(); renderMine(); renderOthers(); } }, 30000);
 
 // 初期表示
 $("who").innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
-renderAll();
+tickClock(); renderAll();
 </script>
 </body>
 </html>
