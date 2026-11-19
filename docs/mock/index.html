@@ -51,16 +51,20 @@
   .hint { font-size:13px; color:var(--sub); margin:0 0 8px; }
   .loginbar { display:flex; align-items:center; gap:8px; margin:16px 0 10px; color:var(--sub); font-size:14px; }
   .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
-  .rcard { border:1px solid var(--line); border-left:5px solid var(--other); border-radius:8px; padding:8px 12px; margin-bottom:8px; background:#fff; transition:box-shadow .12s, background .12s; }
+  .list { max-height:340px; overflow-y:auto; padding-right:2px; }
+  .rcard { display:flex; align-items:center; gap:10px; min-height:30px; border:1px solid var(--line); border-left:5px solid var(--other); border-radius:6px; padding:3px 10px; margin-bottom:5px; background:#fff; font-size:13px; transition:box-shadow .12s, background .12s; }
   .rcard:last-child { margin-bottom:0; }
   .rcard.mine { border-left-color:var(--blue); background:#f2f7fd; }
   .rcard:hover { box-shadow:0 2px 8px rgba(0,0,0,.18); background:#fffbe8; }
   .rcard.jump { cursor:pointer; }
   .rcard.done { opacity:.55; }
-  .rcard .rtime { font-weight:bold; }
-  .rcard .rsub { color:var(--sub); font-size:13px; margin-top:2px; }
-  .rcard .btns { display:flex; gap:8px; margin-top:6px; }
-  .rcard .btns button { padding:3px 10px; font-size:13px; }
+  .rcard .rtime { font-weight:bold; white-space:nowrap; }
+  .rcard .rsub { flex:1; min-width:0; color:var(--sub); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .rcard .btns { display:flex; gap:6px; }
+  .rcard .btns button { padding:1px 8px; font-size:12px; }
+  .vline { position:absolute; top:0; pointer-events:none; z-index:1; }
+  .vline.h { width:2px; background:rgba(45,55,72,.45); margin-left:-1px; }
+  .vline.m { width:1px; background:rgba(45,55,72,.16); }
   .tag { display:inline-block; margin-left:8px; padding:0 8px; border-radius:999px; background:var(--blue); color:#fff; font-size:11px; font-weight:normal; vertical-align:1px; }
   td.hl { outline:4px solid #ffb300; outline-offset:-4px; position:relative; z-index:2; }
   .clock.away { background:#fff1cc; color:#7a4b00; }
@@ -98,7 +102,7 @@
       <input type="date" id="datePick" aria-label="日付を選ぶ">
     </div>
     <p class="hint" id="hint"></p>
-    <div class="gridwrap"><table id="grid"></table><div id="nowline"></div></div>
+    <div class="gridwrap"><table id="grid"></table><div id="vlines"></div><div id="nowline"></div></div>
     <div class="legend">
       <span style="background:#fff"></span>空き
       <span style="background:var(--other)"></span>ほかの人の予約
@@ -110,12 +114,12 @@
   <div class="loginbar">ログイン中（仮）<select id="who"></select></div>
   <div class="cols">
     <section class="card">
-      <h2>自分の予約（今後）</h2>
-      <div id="mine"></div>
+      <h2 id="mineTitle">自分の予約（今後）</h2>
+      <div id="mine" class="list"></div>
     </section>
     <section class="card">
       <h2 id="dayTitle">選んだ日の予約</h2>
-      <div id="day"></div>
+      <div id="day" class="list"></div>
     </section>
   </div>
 
@@ -153,6 +157,27 @@ let reservations = [
   {id:5,roomId:1,empId:3,date:addDays(today,1),start:14*60,end:15*60,purpose:"面談"},
   {id:6,roomId:2,empId:5,date:addDays(today,1),start:10*60,end:12*60,purpose:"採用面接"},
   {id:7,roomId:4,empId:6,date:addDays(today,1),start:9*60+30,end:10*60,purpose:"電話会議"},
+  // 例題（日付・会議室・社員をばらけさせている）
+  {id:8,roomId:4,empId:3,date:today,start:11*60,end:12*60,purpose:"来客対応"},
+  {id:9,roomId:1,empId:1,date:today,start:14*60,end:15*60,purpose:"週次ミーティング"},
+  {id:10,roomId:2,empId:6,date:today,start:16*60,end:17*60+30,purpose:"新人研修"},
+  {id:11,roomId:3,empId:2,date:today,start:10*60,end:11*60,purpose:"資料レビュー"},
+  {id:12,roomId:1,empId:5,date:today,start:17*60,end:18*60,purpose:"1on1"},
+  {id:13,roomId:1,empId:1,date:addDays(today,1),start:9*60,end:10*60,purpose:"朝会"},
+  {id:14,roomId:3,empId:4,date:addDays(today,1),start:13*60,end:15*60,purpose:"予算会議"},
+  {id:15,roomId:4,empId:2,date:addDays(today,1),start:15*60,end:16*60,purpose:"オンライン商談"},
+  {id:16,roomId:2,empId:3,date:addDays(today,1),start:14*60,end:15*60+30,purpose:"勉強会"},
+  {id:17,roomId:3,empId:6,date:addDays(today,1),start:10*60+30,end:11*60+30,purpose:"面接"},
+  {id:18,roomId:1,empId:5,date:addDays(today,2),start:10*60,end:12*60,purpose:"企画会議"},
+  {id:19,roomId:2,empId:1,date:addDays(today,2),start:13*60,end:14*60,purpose:"架空商事 打ち合わせ"},
+  {id:20,roomId:3,empId:3,date:addDays(today,2),start:9*60,end:10*60,purpose:"朝会"},
+  {id:21,roomId:4,empId:4,date:addDays(today,2),start:14*60,end:15*60,purpose:"電話会議"},
+  {id:22,roomId:1,empId:2,date:addDays(today,2),start:15*60,end:16*60,purpose:"面談"},
+  {id:23,roomId:2,empId:1,date:addDays(today,3),start:10*60,end:11*60,purpose:"営業定例"},
+  {id:24,roomId:3,empId:6,date:addDays(today,3),start:13*60,end:15*60,purpose:"研修"},
+  {id:25,roomId:1,empId:3,date:addDays(today,3),start:11*60,end:12*60,purpose:"面談"},
+  {id:26,roomId:4,empId:1,date:addDays(today,5),start:16*60,end:17*60,purpose:"オンライン商談"},
+  {id:27,roomId:2,empId:2,date:addDays(today,5),start:9*60,end:10*60,purpose:"定例"},
 ];
 let who = 1, viewDate = today, sel = null, drag = null, pop = {mode:null,id:null};
 const $ = id => document.getElementById(id);
@@ -210,7 +235,17 @@ function paintSel() {
     if (m<sel.end && e>sel.start) td.classList.add("sel");
   });
 }
+function drawVLines() {   // 時刻の縦線（1 時間ごとは太く、30 分ごとは細く）。奥の会議室まで見失わないように
+  const t=$("grid"), rw=t.querySelector("th.room").offsetWidth, w=t.offsetWidth-rw;
+  let h = "";
+  for (let m=OPEN+UNIT; m<CLOSE; m+=UNIT) {
+    const x = rw + (m-OPEN)/(CLOSE-OPEN)*w;
+    h += `<div class="vline ${m%60===0?"h":"m"}" style="left:${x}px;top:${t.offsetTop}px;height:${t.offsetHeight}px"></div>`;
+  }
+  $("vlines").innerHTML = h;
+}
 function placeNow() {
+  drawVLines();
   const line=$("nowline"), n=nowMin();
   if (viewDate!==today || n<OPEN || n>=CLOSE) { line.style.display="none"; return; }
   const t=$("grid"), rw=t.querySelector("th.room").offsetWidth;
@@ -233,11 +268,12 @@ function hl(id) {   // カードに重ねたとき、表の予約枠を強調す
 function renderMine() {   // 自分の今後の予約（カードを押すと、その日にジャンプ）
   const list = reservations.filter(x=>x.empId===who && !finished(x))
     .sort((a,b)=> a.date===b.date ? a.start-b.start : a.date.localeCompare(b.date));
+  $("mineTitle").textContent = `自分（${empName(who)}）の予約（今後）`;   // 誤ログインに気づけるよう名前を出す
   $("mine").innerHTML = list.length ? list.map(x=>`
     <div class="rcard mine jump${x.date===viewDate?" here":""}" data-id="${x.id}" title="押すと ${shortDate(x.date)} にジャンプします">
-      <div class="rtime">${shortDate(x.date)} ${hm(x.start)}〜${hm(x.end)}${x.date===viewDate?`<span class="tag">表示中</span>`:""}</div>
+      <div class="rtime">${shortDate(x.date)} ${hm(x.start)}〜${hm(x.end)}</div>
       <div class="rsub">${roomName(x.roomId)} ／ ${esc(x.purpose||"（用件なし）")}</div>
-      ${started(x) ? `<div class="rsub">進行中の予約は変更・キャンセルできません</div>`
+      ${started(x) ? `<span class="rsub" style="flex:none">進行中</span>`
         : `<div class="btns"><button data-edit="${x.id}">変更</button><button class="danger" data-del="${x.id}">キャンセル</button></div>`}</div>`).join("")
     : `<div class="empty">予約はまだありません。<br>上の表の空き枠を押して予約できます。</div>`;
 }
@@ -246,8 +282,9 @@ function renderDay() {   // 選んだ日の、みんなの予約（自分の予�
   const list = reservations.filter(x=>x.date===viewDate).sort((a,b)=>a.start-b.start||a.roomId-b.roomId);
   $("day").innerHTML = list.length ? list.map(x=>`
     <div class="rcard ${x.empId===who?"mine":"other"}${finished(x)?" done":""}" data-id="${x.id}">
-      <div class="rtime">${hm(x.start)}〜${hm(x.end)}　${roomName(x.roomId)}${x.empId===who?`<span class="tag">自分</span>`:""}</div>
-      <div class="rsub">${esc(x.purpose||"（用件なし）")}（${empName(x.empId)}）</div></div>`).join("")
+      <div class="rtime">${hm(x.start)}〜${hm(x.end)}</div>
+      <div class="rsub">${roomName(x.roomId)} ／ ${esc(x.purpose||"（用件なし）")}（${empName(x.empId)}）</div>
+      ${x.empId===who?`<span class="tag" style="margin:0">自分</span>`:""}</div>`).join("")
     : `<div class="empty">この日の予約はまだありません</div>`;
 }
 function renderAll() { renderGrid(); renderMine(); renderDay(); }
