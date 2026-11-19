@@ -20,7 +20,11 @@
   button.danger { color:var(--red); border-color:#e3b5b1; }
   button.danger:hover { background:#fdecea; border-color:var(--red); }
   .datebar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
-  .datebar .label { font-weight:bold; font-size:18px; margin:0 4px 0 8px; }
+  .datebar .label { font-weight:bold; font-size:18px; }
+  .datepick { position:relative; display:inline-flex; align-items:center; gap:8px; margin:0 4px 0 8px; padding:3px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
+  .datepick:hover { background:#f3f5f7; border-color:var(--blue); }
+  .datepick input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+  .datepick input::-webkit-calendar-picker-indicator { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
   .clock { background:#eef3fa; color:var(--blue); border-radius:999px; padding:3px 12px; font-size:14px; font-weight:bold; }
   .datebar .spacer { flex:1; }
   .gridwrap { overflow-x:auto; position:relative; }
@@ -101,10 +105,11 @@
       <button id="prev" aria-label="前の日">◀</button>
       <button id="today">今日</button>
       <button id="next" aria-label="次の日">▶</button>
-      <span class="label" id="dateLabel"></span>
+      <label class="datepick" title="押すとカレンダーから日付を選べます">
+        <span class="label" id="dateLabel"></span><span class="cal" aria-hidden="true">📅</span>
+        <input type="date" id="datePick" aria-label="日付を選ぶ">
+      </label>
       <span class="clock" id="clock"></span>
-      <span class="spacer"></span>
-      <input type="date" id="datePick" aria-label="日付を選ぶ">
     </div>
     <div class="infobar">
       <p class="hint" id="hint"></p>
@@ -452,7 +457,8 @@ const go = d => { closePop(); viewDate = d; renderAll(); };
 $("prev").onclick = () => go(addDays(viewDate,-1));
 $("next").onclick = () => go(addDays(viewDate,1));
 $("today").onclick = () => go(today);
-$("datePick").onchange = () => { if ($("datePick").value) go($("datePick").value); };
+$("datePick").onclick = () => { try { $("datePick").showPicker(); } catch (e) {} };
+$("datePick").onchange =() => { if ($("datePick").value) go($("datePick").value); };
 window.addEventListener("resize", placeNow);
 setInterval(() => { if (!drag) renderAll(); }, 30000);
 document.addEventListener("mouseover", e => { const c = e.target.closest(".rcard[data-id]"); hl(c ? c.dataset.id : null); });
