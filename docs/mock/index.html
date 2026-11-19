@@ -89,6 +89,8 @@
   .rcard:last-child { margin-bottom:0; }
   .rcard.mine { border-left-color:var(--blue); background:#f2f7fd; }
   .rcard:hover { box-shadow:0 2px 8px rgba(0,0,0,.18); background:#fffbe8; }
+  .rcard.hl { box-shadow:0 2px 8px rgba(0,0,0,.18); background:#fffbe8; border-color:#e0b100; }   /* 表の枠にカーソルを重ねたとき */
+  #day .rcard { cursor:pointer; }
   .rcard.jump { cursor:pointer; }
   .rcard.done { opacity:.55; }
   .rcard .rtime { font-weight:bold; white-space:nowrap; }
@@ -478,7 +480,13 @@ $("mine").onclick = e => {
     go(x.date); window.scrollTo({top:0, behavior:"smooth"}); flash(x.id);
   }
 };
-$("day").onclick = e => { const c = e.target.closest(".rcard"); if (c) flash(Number(c.dataset.id)); };
+$("day").onclick = e => {   // 一覧のカードを押すと、表の枠を押したときと同じ詳細を出す
+  const c = e.target.closest(".rcard"); if (!c) return;
+  const x = find(Number(c.dataset.id));
+  window.scrollTo(0, 0);
+  const td = document.querySelector(`td[data-id="${x.id}"]`); if (!td) return;
+  flash(x.id); openPop({mode:"view", ...x}, td.getBoundingClientRect());
+};
 $("who").onchange = () => { who = Number($("who").value); closePop(); renderAll(); };
 const go = d => { closePop(); viewDate = d; calY = Number(d.slice(0,4)); calM = Number(d.slice(5,7)); renderAll(); };
 $("prev").onclick = () => go(addDays(viewDate,-1));
@@ -515,7 +523,20 @@ document.addEventListener("mousedown", e => { if (!$("cal").hidden && !$("cal").
 document.addEventListener("keydown", e => { if (e.key==="Escape") closeCal(); });
 window.addEventListener("resize", placeNow);
 setInterval(() => { if (!drag) renderAll(); }, 30000);
-document.addEventListener("mouseover", e => { const c = e.target.closest(".rcard[data-id]"); hl(c ? c.dataset.id : null); });
+function hlCards(id) {   // 表の枠にカーソルを重ねたとき、下の一覧のカードの色も変える
+  document.querySelectorAll(".rcard.hl").forEach(c=>c.classList.remove("hl"));
+  if (!id) return;
+  document.querySelectorAll(`.rcard[data-id="${id}"]`).forEach(c => {
+    c.classList.add("hl");
+    const box = c.parentElement;   // 一覧の中でスクロールが必要なら、一覧の中だけ動かす
+    if (c.offsetTop < box.scrollTop || c.offsetTop + c.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = c.offsetTop - box.offsetTop - 8;
+  });
+}
+document.addEventListener("mouseover", e => {
+  const c = e.target.closest(".rcard[data-id]"), t = e.target.closest("td[data-id]");
+  hl(c ? c.dataset.id : null);        // 一覧 → 表
+  hlCards(t ? t.dataset.id : null);   // 表 → 一覧
+});
 
 // 初期表示
 $("who").innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
