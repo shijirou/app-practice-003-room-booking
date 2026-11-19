@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>会議室予約（画面モック）</title>
 <style>
-  :root { --bg:#dce0e5; --text:#1b1f24; --sub:#5f6975; --card:#fff; --blue:#0b5cad; --other:#c9ced6; --red:#b3261e; --line:#c4cad2; }
+  :root { --bg:#eef1f5; --text:#1b1f24; --sub:#5f6975; --card:#fff; --blue:#0b5cad; --other:#cfd6e4; --red:#b3261e; --line:#c4cad2; --soft:#e6e9ee; --hatch:repeating-linear-gradient(45deg,#f1f3f6,#f1f3f6 4px,#e2e6eb 4px,#e2e6eb 5px); }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:"Yu Gothic UI","Meiryo",sans-serif; font-size:15px; }
   .wrap { max-width:1200px; margin:0 auto; padding:16px; }
@@ -19,24 +19,27 @@
   button.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
   button.danger:hover { color:var(--red); border-color:var(--red); }
   .datebar { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
-  .datebar .label { font-weight:bold; min-width:130px; text-align:center; }
+  .datebar .label { font-weight:bold; font-size:18px; min-width:190px; text-align:center; }
   .gridwrap { overflow-x:auto; }
   table { border-collapse:collapse; table-layout:fixed; width:100%; min-width:900px; }
-  th, td { border:1px solid var(--line); height:38px; padding:0; text-align:center; font-size:12px; }
-  th.room { width:150px; white-space:nowrap; text-align:left; padding:0 8px; background:#f3f5f7; font-size:13px; }
-  th.hour { background:#f3f5f7; color:var(--sub); font-weight:normal; }
+  th, td { border:1px solid var(--soft); height:42px; padding:0; text-align:center; font-size:13px; }
+  th.room { width:150px; white-space:nowrap; text-align:left; padding:0 10px; background:#f3f5f7; font-size:13px; border-color:var(--line); }
+  th.hour { background:#f3f5f7; color:var(--sub); font-weight:normal; text-align:left; padding-left:6px; border-color:var(--line); }
+  td.hr { border-left-color:var(--line); }
   td.free { background:#fff; cursor:pointer; }
-  td.free:hover { background:#e3eefb; }
-  td.past { background:#eef0f3; cursor:not-allowed; }
-  td.busy { background:var(--other); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 4px; }
-  td.mine { background:var(--blue); color:#fff; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 4px; }
-  .legend { font-size:12px; color:var(--sub); margin-top:8px; }
-  .legend span { display:inline-block; width:12px; height:12px; vertical-align:middle; border:1px solid var(--line); margin:0 4px 0 12px; }
-  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  td.free:hover { background:#d6e6fa; }
+  td.past { background:var(--hatch); cursor:not-allowed; }
+  td.busy { background:var(--other); color:#2b3342; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; border-color:#fff; }
+  td.mine { background:var(--blue); color:#fff; font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 6px; border-color:#fff; }
+  .legend { font-size:13px; color:var(--sub); margin-top:10px; }
+  .legend span { display:inline-block; width:14px; height:14px; vertical-align:middle; border:1px solid var(--line); border-radius:3px; margin:0 5px 0 16px; }
+  .legend span:first-child { margin-left:0; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
   .row { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:10px; }
   .row select, .row input { width:100%; max-width:260px; }
-  .err { color:var(--red); min-height:1.4em; margin-bottom:6px; font-size:14px; }
-  .ok { color:#1a7f37; min-height:1.4em; font-size:14px; }
+  .err { color:var(--red); background:#fdecea; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:14px; }
+  .ok { color:#1a7f37; background:#e8f5ec; border-radius:6px; padding:6px 10px; margin-top:10px; font-size:14px; }
+  .err:empty, .ok:empty { display:none; }
   .item { border-bottom:1px solid #e6e9ed; padding:8px 0; display:flex; justify-content:space-between; gap:10px; align-items:center; }
   .item:last-child { border-bottom:none; }
   .item .sub { color:var(--sub); font-size:13px; }
@@ -64,8 +67,8 @@
     <div class="legend">
       <span style="background:#fff"></span>空き（押すと予約フォームに入ります）
       <span style="background:var(--other)"></span>ほかの人の予約
-      <span style="background:var(--blue)"></span>自分の予約
-      <span style="background:#eef0f3"></span>過去
+      <span style="background:var(--blue);border-color:var(--blue)"></span>自分の予約
+      <span style="background:var(--hatch)"></span>過去（予約できません）
     </div>
   </section>
 
@@ -131,7 +134,8 @@ function setForm(roomId, date, start, end, purpose) {
 function isPast(date, startMin) { return date < today || (date === today && startMin < nowMin()); }
 
 function renderGrid() {
-  $("dateLabel").textContent = `${viewDate}(${youbi(viewDate)})`;
+  const [vy, vm, vd] = viewDate.split("-").map(Number);
+  $("dateLabel").textContent = `${vy}年${vm}月${vd}日（${youbi(viewDate)}）`;
   $("datePick").value = viewDate;
   let h = `<tr><th class="room">会議室</th>`;
   for (let m=OPEN; m<CLOSE; m+=60) h += `<th class="hour" colspan="2">${hm(m)}</th>`;
@@ -148,7 +152,7 @@ function renderGrid() {
       } else if (day.some(x=>x.start<m && x.end>m)) { m += STEP; }
       else {
         const past = isPast(viewDate, m);
-        h += `<td class="${past?"past":"free"}" data-room="${r.id}" data-m="${m}"></td>`;
+        h += `<td class="${past?"past":"free"}${m%60===0?" hr":""}" data-room="${r.id}" data-m="${m}"></td>`;
         m += STEP;
       }
     }
