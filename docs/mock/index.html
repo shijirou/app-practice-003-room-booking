@@ -110,7 +110,7 @@
         <span class="label" id="dateLabel"></span><span class="cal" aria-hidden="true">📅</span>
         <input type="date" id="datePick" aria-label="日付を選ぶ">
       </label>
-      <span class="clock" id="clock"></span><span class="clock away" id="todayChip" hidden></span>
+      <span class="clock" id="clock"></span>
     </div>
     <div class="infobar">
       <p class="hint" id="hint"></p>
@@ -268,9 +268,10 @@ function placeNow() {
 function flash(id) { const c=document.querySelector(`td[data-id="${id}"]`); if (c) { c.classList.add("flash"); c.scrollIntoView({block:"nearest",inline:"nearest"}); } }
 function tickClock() {   // 今日以外の日を見ているときは、今日の日付も出す
   const away = viewDate !== today;
-  $("clock").textContent = `現在 ${hm(nowMin())}`;          // 位置は固定
-  $("todayChip").hidden = !away;                              // 別の日を見ているときだけ、右側に今日の日付を出す
-  $("todayChip").textContent = `今日 ${shortDate(today)}`;
+  // 1 つの枠にまとめる。別の日を見ているときは、時刻の右に今日の日付をつなげる（時刻の位置は変わらない）
+  const c = $("clock");
+  c.textContent = away ? `現在 ${hm(nowMin())}　今日 ${shortDate(today)}` : `現在 ${hm(nowMin())}`;
+  c.classList.toggle("away", away);
 }
 function hl(id) {   // カードに重ねたとき、表の予約枠を強調する
   document.querySelectorAll("td.hl").forEach(t=>t.classList.remove("hl"));
