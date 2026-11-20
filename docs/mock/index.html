@@ -70,6 +70,7 @@
   td.busy:hover { background:#bcc6da; }
   td.mine { background:var(--blue); color:#fff; font-weight:bold; }
   td.mine:hover { background:#094b8f; }
+  td.bad, td.bad:hover { background:#e5484d; color:#fff; }   /* ドラッグが予約済みと重なった部分 */
   td.flash { animation:flash 1.4s ease-out 1; }
   @keyframes flash { 0%,40% { box-shadow:inset 0 0 0 3px #ffd54a, 0 0 12px 2px #ffd54a; } 100% { box-shadow:none; } }
   #nowline { position:absolute; width:2px; background:var(--red); pointer-events:none; display:none; }
@@ -447,16 +448,37 @@ $("grid").addEventListener("mousedown", e => {
 });
 $("grid").addEventListener("mouseover", e => {
   if (!drag) return;
-  const td = e.target.closest("td.free");
-  if (!td || Number(td.dataset.room)!==drag.room) return;
-  const cm=Number(td.dataset.m), ce=cm+Number(td.dataset.len);
+  const td = e.target.closest("td.free, td.busy, td.mine");
+  if (!td) return;
+  let cm, ce;
+  if (td.classList.contains("free")) {
+    if (Number(td.dataset.room)!==drag.room) return;
+    cm=Number(td.dataset.m); ce=cm+Number(td.dataset.len);
+  } else {
+    const rv=find(Number(td.dataset.id));
+    if (rv.roomId!==drag.room) return;
+    cm=rv.start; ce=rv.end;
+  }
   const lo=Math.min(drag.aStart,cm), hi=Math.max(drag.aEnd,ce);
-  if (overlaps(drag.room, viewDate, lo, hi)) return;
+  drag.bad = overlaps(drag.room, viewDate, lo, hi);
+  paintBad(drag.bad ? lo : null, hi);   // 予約済みと重なる部分を赤くする
+  if (drag.bad) return;                  // 青い選択は、最後に重ならなかった範囲のまま
   drag.lo=lo; drag.hi=hi; sel = {roomId:drag.room, date:viewDate, start:Math.max(lo,minStart(viewDate)), end:hi, draft:false}; paintSel();
 });
+function paintBad(lo, hi) {
+  document.querySelectorAll("td.bad").forEach(td=>td.classList.remove("bad"));
+  if (lo===null) return;
+  document.querySelectorAll("td.busy, td.mine").forEach(td => {
+    const rv=find(Number(td.dataset.id));
+    if (rv.roomId===drag.room && rv.date===viewDate && rv.start<hi && rv.end>lo) td.classList.add("bad");
+  });
+}
 document.addEventListener("mouseup", () => {
   if (!drag) return;
   const d = drag; drag = null;
+  if (d.bad) {   // 予約済みと重なったまま離したときは、予約画面を開かない
+    paintBad(null); sel=null; paintSel(); toast("その時間はすでに予約があります"); return;
+  }
   const click = d.lo===d.aStart && d.hi===d.aEnd;
   const start = Math.max(d.lo, minStart(viewDate));
   const end = click ? maxEnd(d.room, viewDate, start) : d.hi;
