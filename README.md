@@ -36,6 +36,13 @@
 1. `.env.example` をコピーして `.env` を作り、`DB_PASSWORD` を自分で決めた値に書き換える（`.env` は GitHub に載せない）。
 2. `docker compose up -d` で起動する（停止は `docker compose down`）。
 
+### API の起動（Spring Boot・ポート 8080）
+`backend/` で `./gradlew bootRun`（先に DB を起動しておく。起動すると Flyway が表とサンプルデータ（すべて架空）を作る）。テストは `./gradlew test`（Docker が必要）。
+
+### 公開リポジトリとしての注意
+- DB のパスワードは `.env` にだけ書く（GitHub に載せない）。コードには初期値も書かない。
+- API は `127.0.0.1`（自分のパソコン）だけで待ち受ける。**ログインが無い学習用なので、そのままインターネット上のサーバーに置かないこと。**
+
 ## 要件定義
 詳細は [要件定義書](docs/requirements.md)。
 
