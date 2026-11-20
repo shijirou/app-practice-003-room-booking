@@ -3,7 +3,7 @@
 [要件定義書](requirements.md) の「技術スタック」の詳細。
 **使うツールを足したり、バージョンを上げたりしたら、この表も更新する。**
 確認日: 2026-11-18（`npm view`・Maven Central・Gradle 公式で、正式公開された安定版の最新を確認）
-方針: 正式公開された安定版の最新を使う（β版・RC・SNAPSHOT は使わない）。状態: **一部作成済み**（DB・backend・画面の骨組みは作成済みで、版は backend/build.gradle と frontend/package.json と同じ。CI はこれから）。
+方針: 正式公開された安定版の最新を使う（β版・RC・SNAPSHOT は使わない）。状態: **一部作成済み**（DB・backend・画面の骨組みは作成済みで、版は backend/build.gradle と frontend/package.json と同じ。CI は GitHub Actions（`.github/workflows/ci.yml`。Action は SHA で固定））。
 
 ## 実行環境
 | 項目 | バージョン | 役割 |
@@ -55,4 +55,4 @@
 
 ## メモ
 - 「前のアプリの版」と書いた項目は、2026-11-17 に確認した版を引き継いでいる。実際に導入するときに、最新の正式版かを確認し直す。
-- GitHub Actions の版（checkout など）は、CI を作るときに確認して追記する。
+- GitHub Actions（2026-11-20 確認。コミットの SHA で固定）: actions/checkout v7.0.1、actions/setup-node v7.1.0、actions/setup-java v6.3.0、gradle/actions（setup-gradle）v6.4.1。版を上げるときは、新しい版の SHA に書き換える。
