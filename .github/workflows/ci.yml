@@ -1,0 +1,75 @@
+# PR と main への push のたびに、画面と API を自動で確かめる。
+#  - frontend: lint（書き方 + 型チェック）・テスト（網羅率つき）・ビルド
+#  - backend : テスト（Testcontainers が、使い捨ての PostgreSQL を Docker で起動する）
+#  - check   : 上の 2 つがどちらも成功したときだけ成功。GitHub のルールセットでは、この `check` を「必須のチェック」にする
+# 公開リポジトリなので、権限は最小にし、Action はコミットの SHA で固定している（コメントの版と対応）。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# このワークフローが使える権限を、リポジトリの読み取りだけにする（乗っ取られても書き換えられない）
+permissions:
+  contents: read
+
+# 同じ PR で続けて push したら、古い実行は止める
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # 後の手順に GitHub の認証情報を残さない
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 部品を入れる（package-lock.json のとおりに）
+        run: npm ci
+      - name: lint（書き方チェック + 型チェック）
+        run: npm run lint
+      - name: テスト（網羅率も測る）
+        run: npm run coverage
+      - name: ビルド（型チェック + ビルド）
+        run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: 25
+      # Gradle の部品のキャッシュ。Gradle Wrapper の jar が公式のものかの確認も、これが行う
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: テスト（網羅率も測る）。DB のパスワードなどの秘密は使わない
+        run: ./gradlew test
+
+  # 2 つのジョブの結果をまとめる。どちらかが失敗・中止なら、ここも失敗する
+  check:
+    needs: [frontend, backend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: 結果を確かめる
+        run: |
+          echo "frontend: ${{ needs.frontend.result }} / backend: ${{ needs.backend.result }}"
+          [ "${{ needs.frontend.result }}" = "success" ] && [ "${{ needs.backend.result }}" = "success" ]
