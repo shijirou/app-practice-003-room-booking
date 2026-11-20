@@ -1,0 +1,22 @@
+# 開発用の DB（PostgreSQL）。起動: docker compose up -d   停止: docker compose down
+# 接続情報は .env から読む（.env.example を参照）。ポートは 5432 で固定。
+services:
+  db:
+    image: postgres:18
+    container_name: room-booking-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"   # 自分のパソコンからだけつなげる
+    volumes:
+      - room-booking-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  room-booking-db-data:

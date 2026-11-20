@@ -30,7 +30,11 @@
 （アプリを作ったあとに書く）
 
 ## 使い方
-（アプリを作ったあとに書く）
+（作りながら書き足していく）
+
+### DB の起動（PostgreSQL・ポート 5432）
+1. `.env.example` をコピーして `.env` を作り、`DB_PASSWORD` を自分で決めた値に書き換える（`.env` は GitHub に載せない）。
+2. `docker compose up -d` で起動する（停止は `docker compose down`）。
 
 ## 要件定義
 詳細は [要件定義書](docs/requirements.md)。
