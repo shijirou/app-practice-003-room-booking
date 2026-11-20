@@ -529,7 +529,17 @@ $("cal").onclick = e => {
   if (b.id==="calPrev" || b.id==="calNext") { calM += b.id==="calNext" ? 1 : -1; if (calM<1) { calM=12; calY--; } if (calM>12) { calM=1; calY++; } return renderCal(); }
   if (b.dataset.d) go(b.dataset.d);   // 選んでも閉じない（表だけ切り替わる）
 };
-document.addEventListener("mousedown", e => { if (!$("cal").hidden && !$("cal").contains(e.target) && !$("dateBtn").contains(e.target)) closeCal(); });
+/* 開いている小窓の外を押したら、小窓を閉じるだけにする（下の予約表やカードには押した操作を通さない） */
+function closeOnOutside(isOpen, box, btn, close) {
+  document.addEventListener("mousedown", e => {
+    if (!isOpen() || box.contains(e.target) || btn.contains(e.target)) return;
+    e.stopPropagation(); e.preventDefault(); close();
+    const swallow = ev => { ev.stopPropagation(); ev.preventDefault(); };
+    document.addEventListener("click", swallow, {capture:true, once:true});
+    setTimeout(() => document.removeEventListener("click", swallow, true), 400);
+  }, true);
+}
+closeOnOutside(() => !$("cal").hidden, $("cal"), $("dateBtn"), closeCal);
 document.addEventListener("keydown", e => { if (e.key==="Escape") closeCal(); });
 window.addEventListener("resize", placeNow);
 setInterval(() => { if (!drag) renderAll(); }, 30000);
@@ -557,7 +567,7 @@ function setTab(t) {
 $("tabMine").onclick = () => setTab("mine");
 $("tabDay").onclick = () => setTab("day");
 $("legendBtn").onclick = () => { $("legend").hidden = !$("legend").hidden; };
-document.addEventListener("mousedown", e => { if (!$("legend").hidden && !$("legend").contains(e.target) && !$("legendBtn").contains(e.target)) $("legend").hidden = true; });
+closeOnOutside(() => !$("legend").hidden, $("legend"), $("legendBtn"), () => { $("legend").hidden = true; });
 document.addEventListener("keydown", e => { if (e.key==="Escape") $("legend").hidden = true; });
 
 // 初期表示
