@@ -1,0 +1,11 @@
+body {
+  margin: 0;
+  font-family: 'Yu Gothic UI', 'Meiryo', sans-serif;
+  background: #eef1f5;
+  color: #1b1f24;
+}
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}

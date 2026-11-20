@@ -39,6 +39,12 @@
 ### API の起動（Spring Boot・ポート 8080）
 `backend/` で `./gradlew bootRun`（先に DB を起動しておく。起動すると Flyway が表とサンプルデータ（すべて架空）を作る）。テストは `./gradlew test`（Docker が必要）。
 
+### 画面の起動（React + Vite・ポート 5173）
+`frontend/` で初回だけ `npm ci`、そのあと `npm run dev`（API は 8080 に中継される）。
+- `npm run lint`: 書き方チェック（oxlint）と型チェック（`tsc --noEmit`）
+- `npm run build`: 型チェックのあとにビルド
+- `npm test`: 自動テスト（`npm run coverage` で網羅率）
+
 ### 公開リポジトリとしての注意
 - DB のパスワードは `.env` にだけ書く（GitHub に載せない）。コードには初期値も書かない。
 - API は `127.0.0.1`（自分のパソコン）だけで待ち受ける。**ログインが無い学習用なので、そのままインターネット上のサーバーに置かないこと。**

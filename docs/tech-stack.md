@@ -3,7 +3,7 @@
 [要件定義書](requirements.md) の「技術スタック」の詳細。
 **使うツールを足したり、バージョンを上げたりしたら、この表も更新する。**
 確認日: 2026-11-18（`npm view`・Maven Central・Gradle 公式で、正式公開された安定版の最新を確認）
-方針: 正式公開された安定版の最新を使う（β版・RC・SNAPSHOT は使わない）。状態: **一部作成済み**（DB・backend は作成済みで、版は backend/build.gradle と同じ。画面・CI はこれから）。
+方針: 正式公開された安定版の最新を使う（β版・RC・SNAPSHOT は使わない）。状態: **一部作成済み**（DB・backend・画面の骨組みは作成済みで、版は backend/build.gradle と frontend/package.json と同じ。CI はこれから）。
 
 ## 実行環境
 | 項目 | バージョン | 役割 |
