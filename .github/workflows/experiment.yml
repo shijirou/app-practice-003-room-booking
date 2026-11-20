@@ -1,0 +1,27 @@
+name: experiment
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  fails:
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
+  gate-without-always:
+    needs: [fails]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "ここは実行されないはず"
+  gate-with-always-no-check:
+    needs: [fails]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "always() だけで、結果は確かめない"
+  gate-with-always-and-check:
+    needs: [fails]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: '[ "${{ needs.fails.result }}" = "success" ]'
