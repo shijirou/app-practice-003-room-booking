@@ -1,8 +1,11 @@
 package com.example.roombooking;
 
+import java.sql.SQLException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -25,6 +28,31 @@ public class ApiExceptionHandler {
 	@ExceptionHandler(NotFoundException.class)
 	ResponseEntity<Map<String, String>> notFound(NotFoundException e) {
 		return body(HttpStatus.NOT_FOUND, e.getMessage());
+	}
+
+	@ExceptionHandler(ConflictException.class)
+	ResponseEntity<Map<String, String>> conflict(ConflictException e) {
+		return body(HttpStatus.CONFLICT, e.getMessage());
+	}
+
+	/** 本文が JSON として読めない、日時の形が違うなど */
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	ResponseEntity<Map<String, String>> unreadable(HttpMessageNotReadableException e) {
+		return body(HttpStatus.BAD_REQUEST, "送られた内容を読み取れません。日時は 2026-11-20T10:00:00+09:00 の形で指定してください");
+	}
+
+	/**
+	 * DB の拒否。排他制約違反（23P01 = 同じ会議室の時間が重なる）だけ 409 にする。
+	 * Java の確認をすり抜けて、同時に 2 人が押したときに起こる。ほかは想定外なので、そのまま 500 にする。
+	 */
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	ResponseEntity<Map<String, String>> dataIntegrity(DataIntegrityViolationException e) {
+		for (Throwable t = e; t != null; t = t.getCause()) {
+			if (t instanceof SQLException sql && "23P01".equals(sql.getSQLState())) {
+				return body(HttpStatus.CONFLICT, ReservationService.OVERLAP_MESSAGE);
+			}
+		}
+		throw e;
 	}
 
 	private static ResponseEntity<Map<String, String>> body(HttpStatus status, String message) {
