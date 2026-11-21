@@ -17,4 +17,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 			order by r.startAt, r.id
 			""")
 	List<ReservationResponse> findStartingBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+	/** その社員の、まだ終わっていない予約（進行中を含む）を、開始の早い順に返す。 */
+	@Query("""
+			select new com.example.roombooking.ReservationResponse(
+			    r.id, r.room.id, e.id, e.name, r.startAt, r.endAt, r.purpose)
+			from Reservation r join r.employee e
+			where e.id = :employeeId and r.endAt > :now
+			order by r.startAt, r.id
+			""")
+	List<ReservationResponse> findNotFinishedByEmployee(@Param("employeeId") Long employeeId, @Param("now") Instant now);
 }

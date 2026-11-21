@@ -1,5 +1,6 @@
 package com.example.roombooking;
 
+import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -13,9 +14,22 @@ public class ReservationService {
 	private static final ZoneId TOKYO = ZoneId.of("Asia/Tokyo");
 
 	private final ReservationRepository reservations;
+	private final EmployeeRepository employees;
+	private final Clock clock;
 
-	public ReservationService(ReservationRepository reservations) {
+	public ReservationService(ReservationRepository reservations, EmployeeRepository employees, Clock clock) {
 		this.reservations = reservations;
+		this.employees = employees;
+		this.clock = clock;
+	}
+
+	/** その社員の、今から先（進行中を含む）の予約を、開始の早い順に返す。社員がいなければ 404。 */
+	@Transactional(readOnly = true)
+	public List<ReservationResponse> findUpcomingByEmployee(Long employeeId) {
+		if (!employees.existsById(employeeId)) {
+			throw new NotFoundException("社員が見つかりません");
+		}
+		return reservations.findNotFinishedByEmployee(employeeId, clock.instant());
 	}
 
 	/** 日本時間のその日に始まる予約を、開始の早い順に返す。 */
