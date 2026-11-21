@@ -20,6 +20,8 @@ type Props = {
   onHover: (id: number | null) => void
   /** 「自分の予約」のカードを押したとき（その日へジャンプ） */
   onJump: (reservation: Reservation) => void
+  /** 「みんな」のカードを押したとき（予約の内容を開く） */
+  onOpen: (reservation: Reservation, card: HTMLElement) => void
   /** 読み込みに失敗したとき、やり直す */
   onRetry: () => void
 }
@@ -79,7 +81,7 @@ export default function Lists(props: Props) {
             <div className="empty">
               予約はまだありません。
               <br />
-              予約は、このあとの手順で作れるようになります。
+              上の表の空き枠を押して予約できます。
             </div>
           )}
           {mine.map((r) => (
@@ -115,9 +117,11 @@ export default function Lists(props: Props) {
             <div className="empty">この日の予約はまだありません</div>
           )}
           {dayList.map((r) => (
-            <div
+            <button
+              type="button"
               key={r.id}
               className={`rcard ${r.employeeId === props.selfId ? 'mine' : 'other'}${done(r) ? ' done' : ''}${props.highlightId === r.id ? ' hl' : ''}`}
+              onClick={(e) => props.onOpen(r, e.currentTarget)}
               onMouseEnter={() => props.onHover(r.id)}
               onMouseLeave={() => props.onHover(null)}
             >
@@ -128,7 +132,7 @@ export default function Lists(props: Props) {
                 {roomName(r.roomId)} ／ {purposeOf(r)}（{r.employeeName}）
               </div>
               {r.employeeId === props.selfId && <span className="tag">自分</span>}
-            </div>
+            </button>
           ))}
         </div>
       )}

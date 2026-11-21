@@ -74,6 +74,13 @@ export function minutesOf(iso: string): number {
   return Number(iso.slice(11, 13)) * 60 + Number(iso.slice(14, 16))
 }
 
+/** 日付と「0 時からの分」から、API に送る日時にする。("2026-11-20", 630) → "2026-11-20T10:30:00+09:00" */
+export function isoOf(date: string, minutes: number): string {
+  const h = String(Math.floor(minutes / 60)).padStart(2, '0')
+  const m = String(minutes % 60).padStart(2, '0')
+  return `${date}T${h}:${m}:00+09:00`
+}
+
 /** 630 → "10:30" */
 export function formatMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60)

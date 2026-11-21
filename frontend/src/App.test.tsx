@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -33,14 +33,29 @@ type Options = {
   day?: (date: string) => Response
   /** 社員ごとの「今後の予約」の返事 */
   upcoming?: (employeeId: string) => Response
+  /** 予約を作る依頼（POST）への返事 */
+  create?: (body: Record<string, unknown>) => Response
 }
 
-/** fetch を偽物に差し替える。呼ばれた宛先の一覧を返す */
-function mockApi({ day = () => json([]), upcoming = () => json([]) }: Options = {}) {
+/** 予約を作るために送られた内容 */
+let posts: Record<string, unknown>[] = []
+
+/** fetch を偽物に差し替える。呼ばれた宛先（GET）の一覧を返す */
+function mockApi({
+  day = () => json([]),
+  upcoming = () => json([]),
+  create = () => json(reservation({ id: 200 }), 201),
+}: Options = {}) {
   const calls: string[] = []
+  posts = []
   vi.stubGlobal(
     'fetch',
-    vi.fn((url: string) => {
+    vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>
+        posts.push(body)
+        return Promise.resolve(create(body))
+      }
       calls.push(url)
       if (url === '/api/employees') return Promise.resolve(json(employees))
       if (url === '/api/rooms') return Promise.resolve(json(rooms))
@@ -255,5 +270,193 @@ describe('App', () => {
     await userEvent.click(within(alert).getByRole('button', { name: 'もう一度読み込む' }))
     expect(await screen.findByText(/予約はまだありません/)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  describe('予約する', () => {
+    /** 会議室 A の、指定した時刻の空き枠 */
+    const freeCell = (time: string) => screen.getAllByRole('cell', { name: time + ' 空き' })[0]
+
+    it('空き枠を押すと 1 時間の小窓が開き、仮表示が出て、予約すると送って表を取り直し、お知らせを出す', async () => {
+      let created = false
+      const calls = mockApi({
+        day: () => json(created ? [reservation({ id: 200, purpose: '打合せ' })] : []),
+        create: () => {
+          created = true
+          return json(reservation({ id: 200, purpose: '打合せ' }), 201)
+        },
+      })
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(freeCell('10:00'))
+      const dialog = screen.getByRole('dialog', { name: '予約' })
+      expect(within(dialog).getByLabelText('開始')).toHaveValue('600')
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('660') // 最大 1 時間
+      expect(screen.getByText('10:00〜11:00 予約中…')).toHaveClass('draft')
+
+      await userEvent.selectOptions(within(dialog).getByLabelText('終了'), '690')
+      expect(screen.getByText('10:00〜11:30 予約中…')).toBeInTheDocument()
+
+      await userEvent.type(within(dialog).getByLabelText('用件'), '打合せ')
+      await userEvent.click(within(dialog).getByRole('button', { name: '予約する' }))
+
+      expect(await screen.findByRole('status')).toHaveTextContent('予約しました')
+      expect(posts).toEqual([
+        {
+          employeeId: 1,
+          roomId: 10,
+          startAt: '2026-11-20T10:00:00+09:00',
+          endAt: '2026-11-20T11:30:00+09:00',
+          purpose: '打合せ',
+        },
+      ])
+      expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument()
+      const mine = await screen.findByText('打合せ（田中）')
+      expect(mine).toHaveClass('mine', 'flash')
+      expect(calls.filter((c) => c === '/api/reservations?date=2026-11-20')).toHaveLength(2) // 最初と、予約後
+    })
+
+    it('用件が空なら null で送る。Enter でも送れる', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.type(screen.getByLabelText('用件'), '   {Enter}')
+      await waitFor(() => expect(posts).toHaveLength(1))
+      expect(posts[0].purpose).toBeNull()
+    })
+
+    it('次の予約があるときは、その開始までで小窓が開く', async () => {
+      mockApi({
+        day: () => json([reservation({ startAt: '2026-11-20T10:30:00+09:00', endAt: '2026-11-20T11:30:00+09:00' })]),
+      })
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(freeCell('10:00'))
+      expect(screen.getByLabelText('終了')).toHaveValue('630') // 10:30
+    })
+
+    it('サーバーが断ったら（重複など）、小窓の中に理由を出し、入力は消さない', async () => {
+      mockApi({ create: () => json({ message: 'その時間はすでに予約があります' }, 409) })
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.type(screen.getByLabelText('用件'), '打合せ')
+      await userEvent.click(screen.getByRole('button', { name: '予約する' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('その時間はすでに予約があります')
+      expect(screen.getByLabelText('用件')).toHaveValue('打合せ')
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '予約する' })).toBeEnabled() // 直して、もう一度送れる
+    })
+
+    it('今より前の時刻を選ぶと、送らずに理由を出す', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.selectOptions(screen.getByLabelText('開始'), '480') // 8:00
+      await userEvent.click(screen.getByRole('button', { name: '予約する' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('今日は 9:00 以降から予約できます')
+      expect(posts).toHaveLength(0)
+    })
+
+    it('開始を遅くすると終了も動く。日付を変えると表もその日になり、仮表示も移る', async () => {
+      const calls = mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.selectOptions(screen.getByLabelText('開始'), '720') // 12:00
+      expect(screen.getByLabelText('終了')).toHaveValue('780') // 13:00（開始 + 1 時間）
+
+      fireEvent.change(screen.getByLabelText('日付'), { target: { value: '2026-11-25' } })
+      await waitFor(() => expect(calls).toContain('/api/reservations?date=2026-11-25'))
+      expect(await screen.findByText('2026年11月25日（水）')).toBeInTheDocument()
+      expect(await screen.findByText('12:00〜13:00 予約中…')).toBeInTheDocument()
+    })
+
+    it('Esc・×・やめる で閉じる。社員を変えても閉じる', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument()
+      expect(screen.queryByTestId('draft')).not.toBeInTheDocument()
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
+      expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument()
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.click(screen.getByRole('button', { name: 'やめる' }))
+      expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument()
+
+      await userEvent.click(freeCell('10:00'))
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: /ログイン中/ }), '佐藤架空')
+      expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument()
+    })
+
+    it('過去の枠は押しても開かない', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      await userEvent.click(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('予約の内容', () => {
+    it('ほかの人の予約を押すと内容と「変更できません」が出る。Esc で閉じる', async () => {
+      mockApi({ day: () => json([reservation({ employeeId: 2, employeeName: '佐藤架空', purpose: '商談' })]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('商談（佐藤）'))
+      const dialog = screen.getByRole('dialog', { name: '予約の内容' })
+      expect(within(dialog).getByText('10:00〜11:30')).toBeInTheDocument()
+      expect(within(dialog).getByText(/会議室A ／ 2026年11月20日（金）/)).toBeInTheDocument()
+      expect(within(dialog).getByText(/用件：商談/)).toBeInTheDocument()
+      expect(within(dialog).getByText(/予約した人：佐藤架空/)).toBeInTheDocument()
+      expect(within(dialog).getByText('他の人の予約は変更できません。')).toBeInTheDocument()
+
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('自分の始まった予約には「始まった予約は変更・キャンセルできません。」、これからの予約には何も付かない', async () => {
+      mockApi({
+        day: () =>
+          json([
+            reservation({ id: 1, startAt: '2026-11-20T08:30:00+09:00', endAt: '2026-11-20T09:30:00+09:00', purpose: '朝会' }),
+            reservation({}),
+          ]),
+      })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('朝会（田中）'))
+      expect(screen.getByText('始まった予約は変更・キャンセルできません。')).toBeInTheDocument()
+
+      await userEvent.click(screen.getByText('営業定例（田中）'))
+      expect(screen.queryByText('始まった予約は変更・キャンセルできません。')).not.toBeInTheDocument()
+      expect(screen.queryByText('他の人の予約は変更できません。')).not.toBeInTheDocument()
+    })
+
+    it('「みんな」のカードを押しても、同じ内容が出る', async () => {
+      window.scrollTo = vi.fn()
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByRole('tab', { name: /の予約（みんな）/ }))
+      await userEvent.click(screen.getByText('会議室A ／ 営業定例（田中架空）'))
+      expect(screen.getByRole('dialog', { name: '予約の内容' })).toBeInTheDocument()
+    })
   })
 })
