@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchEmployees, fetchReservations, fetchRooms, fetchUpcoming, type Reservation } from './api'
 import DateBar from './DateBar'
 import Legend from './Legend'
@@ -43,6 +43,8 @@ export default function App({ now = () => new Date() }: Props) {
   const [flashId, setFlashId] = useState<number | null>(null)
   // 「もう一度読み込む」ボタンで増やして、読み込みをやり直す
   const [retry, setRetry] = useState(0)
+  // ジャンプ後に光らせる時間のタイマー（連続でジャンプしたら、前のを止める）
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const base = useLoaded(fetchBase, null, retry)
   const reservations = useLoaded(fetchReservations, date, retry)
@@ -52,9 +54,11 @@ export default function App({ now = () => new Date() }: Props) {
 
   const jump = (r: Reservation) => {
     setDate(dateOf(r.startAt))
+    setHighlightId(null)
     setFlashId(r.id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    setTimeout(() => setFlashId(null), 1500)
+    if (flashTimer.current !== null) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlashId(null), 1500)
   }
 
   const failure =
@@ -131,19 +135,20 @@ export default function App({ now = () => new Date() }: Props) {
         )}
       </section>
 
-      {base.status === 'ok' && reservations.status === 'ok' && (
+      {base.status === 'ok' && (
         <Lists
           rooms={base.data.rooms}
           selfId={selfId}
           selfName={base.data.employees.find((e) => e.id === selfId)?.name ?? ''}
           date={date}
-          dayReservations={reservations.data}
+          day={reservations}
           upcoming={upcoming}
           today={today}
           nowMinutes={nowMinutes}
           highlightId={highlightId}
           onHover={setHighlightId}
           onJump={jump}
+          onRetry={() => setRetry((n) => n + 1)}
         />
       )}
     </div>

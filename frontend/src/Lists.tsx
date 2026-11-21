@@ -10,7 +10,7 @@ type Props = {
   selfName: string
   /** 今見ている日と、その日の全予約 */
   date: string
-  dayReservations: Reservation[]
+  day: Loaded<Reservation[]>
   /** 選んでいる社員の、今から先の予約 */
   upcoming: Loaded<Reservation[]>
   today: string
@@ -20,13 +20,15 @@ type Props = {
   onHover: (id: number | null) => void
   /** 「自分の予約」のカードを押したとき（その日へジャンプ） */
   onJump: (reservation: Reservation) => void
+  /** 読み込みに失敗したとき、やり直す */
+  onRetry: () => void
 }
 
 type Tab = 'mine' | 'day'
 
 /** 下の欄。「自分の予約（今後）」と「その日のみんなの予約」をタブで切り替える。 */
 export default function Lists(props: Props) {
-  const { rooms, selfName, date, dayReservations, upcoming, today, nowMinutes } = props
+  const { rooms, selfName, date, upcoming, today, nowMinutes } = props
   const [tab, setTab] = useState<Tab>('mine')
 
   const roomName = (id: number) => rooms.find((r) => r.id === id)?.name ?? ''
@@ -35,7 +37,7 @@ export default function Lists(props: Props) {
 
   // 画面を開いたまま時間が過ぎて終わった予約は、「今後」から外す
   const mine = upcoming.status === 'ok' ? upcoming.data.filter((r) => !done(r)) : []
-  const day = [...dayReservations].sort(
+  const dayList = [...(props.day.status === 'ok' ? props.day.data : [])].sort(
     (a, b) => minutesOf(a.startAt) - minutesOf(b.startAt) || a.roomId - b.roomId,
   )
 
@@ -58,14 +60,21 @@ export default function Lists(props: Props) {
           className={`tab${tab === 'day' ? ' on' : ''}`}
           onClick={() => setTab('day')}
         >
-          {formatShortDate(date)} の予約（みんな）{day.length}件
+          {formatShortDate(date)} の予約（みんな）{props.day.status === 'ok' ? `${dayList.length}件` : ''}
         </button>
       </div>
 
       {tab === 'mine' && (
         <div className="list" role="tabpanel">
           {upcoming.status === 'loading' && <div className="empty">読み込み中…</div>}
-          {upcoming.status === 'error' && <div className="empty">{upcoming.message}</div>}
+          {upcoming.status === 'error' && (
+            <div className="err" role="alert">
+              {upcoming.message}
+              <button type="button" onClick={props.onRetry}>
+                もう一度読み込む
+              </button>
+            </div>
+          )}
           {upcoming.status === 'ok' && mine.length === 0 && (
             <div className="empty">
               予約はまだありません。
@@ -100,8 +109,12 @@ export default function Lists(props: Props) {
 
       {tab === 'day' && (
         <div className="list" role="tabpanel">
-          {day.length === 0 && <div className="empty">この日の予約はまだありません</div>}
-          {day.map((r) => (
+          {props.day.status === 'loading' && <div className="empty">読み込み中…</div>}
+          {props.day.status === 'error' && <div className="empty">{props.day.message}</div>}
+          {props.day.status === 'ok' && dayList.length === 0 && (
+            <div className="empty">この日の予約はまだありません</div>
+          )}
+          {dayList.map((r) => (
             <div
               key={r.id}
               className={`rcard ${r.employeeId === props.selfId ? 'mine' : 'other'}${done(r) ? ' done' : ''}${props.highlightId === r.id ? ' hl' : ''}`}
