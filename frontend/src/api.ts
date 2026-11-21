@@ -18,9 +18,13 @@ export type Reservation = {
 export class ApiError extends Error {}
 
 async function getJson<T>(url: string): Promise<T> {
+  return requestJson<T>(url)
+}
+
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
-    response = await fetch(url)
+    response = await fetch(url, init)
   } catch {
     throw new ApiError('サーバーにつながりません。しばらくしてからもう一度お試しください。')
   }
@@ -42,6 +46,23 @@ async function messageOf(response: Response): Promise<string> {
   }
   return 'エラーが起きました。しばらくしてからもう一度お試しください。'
 }
+
+/** 予約を作るときに送る内容。日時は +09:00 つき（"2026-11-20T10:00:00+09:00"） */
+export type NewReservation = {
+  employeeId: number
+  roomId: number
+  startAt: string
+  endAt: string
+  purpose: string | null
+}
+
+/** 予約を作る。失敗したら、API のメッセージを持つ ApiError を投げる（400・404・409 など）。 */
+export const createReservation = (input: NewReservation) =>
+  requestJson<Reservation>('/api/reservations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
 
 export const fetchEmployees = () => getJson<Employee[]>('/api/employees')
 

@@ -17,6 +17,12 @@ type Props = {
   flashId: number | null
   /** 表の予約枠にカーソルを重ねた・外したとき（下の一覧のカードを強調するため） */
   onHover: (id: number | null) => void
+  /** 小窓で入力中の予約（点線の枠で仮表示する）。見ている日のものだけ渡す */
+  draft: { roomId: number; start: number; end: number } | null
+  /** 空き枠を押したとき */
+  onFreeClick: (roomId: number, start: number, rect: DOMRect) => void
+  /** 予約済みの枠を押したとき */
+  onReservationClick: (reservation: Reservation, rect: DOMRect) => void
 }
 
 const HOURS = Array.from({ length: (CLOSE - OPEN) / 60 }, (_, i) => OPEN + i * 60)
@@ -35,6 +41,9 @@ export default function Timetable({
   highlightId,
   flashId,
   onHover,
+  draft,
+  onFreeClick,
+  onReservationClick,
 }: Props) {
   const firstStart = earliestStart(date, today, nowMinutes)
   const showNow = date === today && nowMinutes >= OPEN && nowMinutes < CLOSE
@@ -84,8 +93,11 @@ export default function Timetable({
       .sort((a, b) => minutesOf(a.startAt) - minutesOf(b.startAt))
     const cells = []
     let cursor = OPEN
+    // 入力中の予約は、同じ会議室の枠の並びに混ぜる（つながった 1 つの点線のセルにする）
+    const drafted = draft !== null && draft.roomId === roomId && draft.end > draft.start ? draft : null
     const addFree = (until: number) => {
       for (; cursor < until; cursor += UNIT) {
+        const start = cursor
         const past = cursor + UNIT <= firstStart
         const classes = [past ? 'past' : 'free', cursor % 60 === 0 ? 'hr' : ''].filter(Boolean).join(' ')
         cells.push(
@@ -95,11 +107,30 @@ export default function Timetable({
             title={past ? '過去の時間は予約できません' : undefined}
             aria-label={`${formatMinutes(cursor)} ${past ? '過去' : '空き'}`}
             data-testid={past ? 'past' : 'free'}
+            onClick={past ? undefined : (e) => onFreeClick(roomId, start, e.currentTarget.getBoundingClientRect())}
           />,
         )
       }
     }
+    const addDraft = () => {
+      if (drafted === null) return
+      const start = Math.max(drafted.start, cursor)
+      const end = Math.min(drafted.end, CLOSE)
+      if (end <= start) return
+      addFree(start)
+      cells.push(
+        <td key="draft" className="draft" colSpan={(end - start) / UNIT} data-testid="draft">
+          {formatMinutes(start)}〜{formatMinutes(end)} 予約中…
+        </td>,
+      )
+      cursor = end
+    }
+    let draftDone = drafted === null
     for (const r of inRoom) {
+      if (!draftDone && drafted !== null && drafted.start < minutesOf(r.startAt)) {
+        addDraft()
+        draftDone = true
+      }
       const start = Math.max(minutesOf(r.startAt), cursor)
       const end = Math.min(minutesOf(r.endAt), CLOSE)
       if (end <= start) continue
@@ -119,6 +150,8 @@ export default function Timetable({
           colSpan={(end - start) / UNIT}
           title={`${formatMinutes(start)}〜${formatMinutes(end)} ${purpose}（${r.employeeName}）`}
           data-testid="reservation"
+          data-id={r.id}
+          onClick={(e) => onReservationClick(r, e.currentTarget.getBoundingClientRect())}
           onMouseEnter={() => onHover(r.id)}
           onMouseLeave={() => onHover(null)}
         >
@@ -127,6 +160,7 @@ export default function Timetable({
       )
       cursor = end
     }
+    if (!draftDone) addDraft()
     addFree(CLOSE)
     return cells
   }
