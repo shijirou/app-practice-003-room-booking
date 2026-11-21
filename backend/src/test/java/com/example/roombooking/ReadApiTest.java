@@ -92,7 +92,38 @@ class ReadApiTest {
 	void dateもemployeeIdもないと400() throws Exception {
 		mvc.perform(get("/api/reservations"))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value("date を指定してください"));
+				.andExpect(jsonPath("$.message").value("date か employeeId のどちらかを指定してください"));
+	}
+
+	@Test
+	void employeeIdを指定すると終わっていない予約だけを開始順に返す() throws Exception {
+		long sato = jdbc.queryForObject("SELECT id FROM employee WHERE name = '佐藤架空'", Long.class);
+		insert(roomB, "2099-01-02T10:00:00+09:00", "2099-01-02T11:00:00+09:00", "あと");
+		insert(roomA, "2099-01-01T10:00:00+09:00", "2099-01-01T11:00:00+09:00", "さき");
+		insert(roomA, "2000-01-01T10:00:00+09:00", "2000-01-01T11:00:00+09:00", "終わった予約");
+		// ほかの社員の予約は含まれない
+		jdbc.update("INSERT INTO reservation (room_id, employee_id, start_at, end_at) VALUES (?, ?, ?::timestamptz, ?::timestamptz)",
+				roomA, sato, "2099-01-01T13:00:00+09:00", "2099-01-01T14:00:00+09:00");
+
+		mvc.perform(get("/api/reservations").param("employeeId", String.valueOf(tanaka)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(2))
+				.andExpect(jsonPath("$[0].purpose").value("さき"))
+				.andExpect(jsonPath("$[1].purpose").value("あと"));
+	}
+
+	@Test
+	void 存在しない社員のemployeeIdは404() throws Exception {
+		mvc.perform(get("/api/reservations").param("employeeId", "999999"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("社員が見つかりません"));
+	}
+
+	@Test
+	void employeeIdが数字でないと400() throws Exception {
+		mvc.perform(get("/api/reservations").param("employeeId", "abc"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").isNotEmpty());
 	}
 
 	@Test

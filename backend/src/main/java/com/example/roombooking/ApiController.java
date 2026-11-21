@@ -41,7 +41,7 @@ public class ApiController {
 				.toList();
 	}
 
-	/** date か employeeId のどちらか 1 つだけ付ける。employeeId（自分の予約）は縦切り 3 で作る。 */
+	/** date（その日の全予約）か employeeId（その社員の今から先の予約）の、どちらか 1 つだけ付ける。 */
 	@GetMapping("/reservations")
 	List<ReservationResponse> reservations(
 			@RequestParam(required = false) String date,
@@ -49,10 +49,11 @@ public class ApiController {
 		if (date != null && employeeId != null) {
 			throw new BadRequestException("date と employeeId は、どちらか 1 つだけ指定してください");
 		}
-		if (date == null) {
-			throw new BadRequestException(employeeId == null
-					? "date を指定してください"
-					: "employeeId での検索は、まだ使えません");
+		if (date == null && employeeId == null) {
+			throw new BadRequestException("date か employeeId のどちらかを指定してください");
+		}
+		if (employeeId != null) {
+			return reservations.findUpcomingByEmployee(employeeId);
 		}
 		return reservations.findByDate(ReservationService.parseDate(date));
 	}

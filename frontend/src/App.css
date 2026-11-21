@@ -1,11 +1,535 @@
+/* 見た目は docs/mock/index.html（最終モック）に合わせている */
+:root {
+  --bg: #eef1f5;
+  --text: #1b1f24;
+  --sub: #5f6975;
+  --card: #fff;
+  --blue: #0b5cad;
+  --other: #cfd6e4;
+  --red: #b3261e;
+  --line: #c4cad2;
+  --soft: #e6e9ee;
+  --hatch: repeating-linear-gradient(45deg, #f1f3f6, #f1f3f6 4px, #e2e6eb 4px, #e2e6eb 5px);
+}
+* {
+  box-sizing: border-box;
+}
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Yu Gothic UI', 'Meiryo', sans-serif;
-  background: #eef1f5;
-  color: #1b1f24;
+  font-size: 15px;
 }
-main {
-  max-width: 960px;
+.wrap {
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 16px;
+}
+h1 {
+  font-size: 20px;
+  margin: 0;
+}
+.card {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+select {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+button:hover {
+  background: #f3f5f7;
+}
+
+/* ---------- 上のバー ---------- */
+header.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.loginbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sub);
+  font-size: 14px;
+}
+.datebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.datebar .label {
+  font-weight: bold;
+  font-size: 18px;
+  display: inline-block;
+  min-width: 182px; /* 日付が変わっても右の時刻の位置がずれない */
+}
+.datewrap {
+  position: relative;
+}
+.datepick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 0 8px;
+  padding: 3px 12px;
+}
+.datepick:hover {
+  border-color: var(--blue);
+}
+.clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 18px;
+  font-weight: bold;
+}
+.clock.away {
+  background: #fff1cc;
+  border-color: #e6c46a;
+  color: #7a4b00;
+}
+
+/* ---------- ミニカレンダー ---------- */
+.cal {
+  margin: 0;
+  color: inherit;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 8px;
+  z-index: 25;
+  width: 320px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.cal-head button {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  line-height: 1;
+}
+.cal-title {
+  padding: 0 4px;
+  font-weight: bold;
+  white-space: nowrap;
+  line-height: 30px;
+}
+.cal-head .spacer {
+  flex: 1;
+}
+.cal-head .cal-x {
+  width: 30px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 22px;
+  color: var(--sub);
+}
+.cal-head .cal-x:hover {
+  color: var(--red);
+  background: none;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-grid .dow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  font-size: 12px;
+  color: var(--sub);
+}
+.cal-grid .sun {
+  color: var(--red);
+}
+.cal-grid .sat {
+  color: var(--blue);
+}
+.day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  padding: 0;
+  font-size: 14px;
+}
+.day:hover {
+  background: #e3eefb;
+}
+.day.sun {
+  color: var(--red);
+}
+.day.sat {
+  color: var(--blue);
+}
+.day.out {
+  opacity: 0.4;
+}
+.day.today {
+  border-color: var(--blue);
+}
+.day.sel,
+.day.sel:hover {
+  background: var(--blue);
+  color: #fff;
+  opacity: 1;
+}
+
+/* ---------- ヒントと色の説明 ---------- */
+.infobar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.hint {
+  font-size: 13px;
+  color: var(--sub);
+  margin: 0;
+  flex: 1;
+}
+.legendwrap {
+  position: relative;
+}
+.help {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: bold;
+  color: var(--blue);
+  line-height: 1;
+}
+.legend {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.legend .li {
+  display: flex;
+  align-items: center;
+}
+.swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.swatch.free {
+  background: #fff;
+}
+.swatch.mine {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+.swatch.busy {
+  background: var(--other);
+}
+.swatch.past {
+  background: var(--hatch);
+}
+
+/* ---------- 会議室 × 時間の表 ---------- */
+.gridwrap {
+  overflow-x: auto;
+}
+.gridinner {
+  position: relative;
+  min-width: 960px;
+}
+.timetable {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  user-select: none;
+}
+.timetable th,
+.timetable td {
+  border: 1px solid var(--soft);
+  height: 44px;
+  padding: 0;
+  text-align: center;
+  font-size: 13px;
+}
+.timetable th.room {
+  width: 150px;
+  white-space: nowrap;
+  text-align: left;
+  padding: 0 10px;
+  background: #f3f5f7;
+  border-color: var(--line);
+}
+.timetable th.hour {
+  background: #f3f5f7;
+  color: var(--sub);
+  font-weight: normal;
+  padding: 0 6px;
+  border-color: var(--line);
+}
+.timetable th.hour div {
+  display: flex;
+  justify-content: space-between;
+}
+.timetable td.hr {
+  border-left-color: #d6dbe2;
+}
+.timetable td.free {
+  background: #fff;
+}
+.timetable tr.alt td.free {
+  background: #f9fafb; /* 1 行おきに薄いグレー（右端まで目で追いやすく） */
+}
+.timetable td.past {
+  background: var(--hatch);
+}
+.timetable td.busy,
+.timetable td.mine {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 0 6px;
+  border-color: #fff;
+}
+.timetable td.busy {
+  background: var(--other);
+  color: #2b3342;
+}
+.timetable td.busy:hover {
+  background: #bcc6da;
+}
+.timetable td.mine {
+  background: var(--blue);
+  color: #fff;
+  font-weight: bold;
+}
+.timetable td.mine:hover {
+  background: #094b8f;
+}
+.timetable td.hl {
+  outline: 4px solid #ffb300;
+  outline-offset: -4px;
+  position: relative;
+  z-index: 2;
+}
+.timetable td.flash {
+  animation: flash 1.4s ease-out 1;
+}
+@keyframes flash {
+  0%,
+  40% {
+    box-shadow:
+      inset 0 0 0 3px #ffd54a,
+      0 0 12px 2px #ffd54a;
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+/* 時刻の縦線と現在時刻の線。左端は、会議室の名前の列（150px）の右から始まる */
+.vlines {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 150px;
+  right: 0;
+  pointer-events: none;
+}
+.vline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+}
+.vline.h {
+  width: 2px;
+  background: rgba(45, 55, 72, 0.11);
+  margin-left: -1px;
+}
+.vline.m {
+  width: 1px;
+  background: rgba(45, 55, 72, 0.05);
+}
+.nowline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--red);
+  z-index: 3;
+}
+.nowline::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+/* ---------- 下の欄（自分の予約・みんなの予約） ---------- */
+.lists {
+  margin-top: 14px;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  padding: 6px 14px;
+  font-size: 15px;
+  color: var(--sub);
+}
+.tab:hover {
+  background: #f3f5f7;
+}
+.tab.on {
+  color: var(--blue);
+  font-weight: bold;
+  border-bottom-color: var(--blue);
+}
+.list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.rcard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--other);
+  border-radius: 6px;
+  padding: 3px 10px;
+  margin-bottom: 5px;
+  background: #fff;
+  font-size: 13px;
+  transition:
+    box-shadow 0.12s,
+    background 0.12s;
+}
+.rcard:last-child {
+  margin-bottom: 0;
+}
+.rcard.mine {
+  border-left-color: var(--blue);
+  background: #f2f7fd;
+}
+.rcard:hover,
+.rcard.hl {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  background: #fffbe8;
+}
+.rcard.hl {
+  border-color: #e0b100;
+}
+button.rcard {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+.rcard.jump {
+  cursor: pointer;
+}
+.rcard.done {
+  opacity: 0.55;
+}
+.rcard .rtime {
+  font-weight: bold;
+  white-space: nowrap;
+}
+.rcard .rsub {
+  flex: 1;
+  min-width: 0;
+  color: var(--sub);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rcard .rsub.fixed {
+  flex: none;
+}
+.tag {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 11px;
+}
+.empty {
+  color: var(--sub);
+  padding: 6px 0;
+}
+.err {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--red);
+  background: #fdecea;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
 }
