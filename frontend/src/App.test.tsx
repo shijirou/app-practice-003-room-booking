@@ -233,4 +233,27 @@ describe('App', () => {
     render(<App now={now} />)
     expect(await screen.findByText(/サーバーにつながりません/)).toBeInTheDocument()
   })
+
+  it('日付を変えても、下の欄は消えず、選んだタブのまま', async () => {
+    mockApi({ day: (date) => json(date === '2026-11-20' ? [reservation({})] : []) })
+    render(<App now={now} />)
+    await userEvent.click(await screen.findByRole('tab', { name: /の予約（みんな）/ }))
+
+    await userEvent.click(screen.getByRole('button', { name: '次の日' }))
+    const dayTab = await screen.findByRole('tab', { name: '11/21(土) の予約（みんな）0件' })
+    expect(dayTab).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByText('この日の予約はまだありません')).toBeInTheDocument()
+  })
+
+  it('自分の予約の読み込みに失敗したら、やり直すボタンが出る', async () => {
+    let fail = true
+    mockApi({ upcoming: () => (fail ? json({ message: 'エラーが起きました' }, 500) : json([])) })
+    render(<App now={now} />)
+
+    const alert = await screen.findByRole('alert')
+    fail = false
+    await userEvent.click(within(alert).getByRole('button', { name: 'もう一度読み込む' }))
+    expect(await screen.findByText(/予約はまだありません/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })
