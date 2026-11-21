@@ -18,6 +18,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 			""")
 	List<ReservationResponse> findStartingBetween(@Param("from") Instant from, @Param("to") Instant to);
 
+	/** 同じ会議室で、[start, end) と重なる予約があるか（隣り合う 10-11 と 11-12 は重ならない）。 */
+	@Query("""
+			select count(r) > 0 from Reservation r
+			where r.room.id = :roomId and r.startAt < :end and r.endAt > :start
+			""")
+	boolean existsOverlap(@Param("roomId") Long roomId, @Param("start") Instant start, @Param("end") Instant end);
+
 	/** その社員の、まだ終わっていない予約（進行中を含む）を、開始の早い順に返す。 */
 	@Query("""
 			select new com.example.roombooking.ReservationResponse(

@@ -11,16 +11,51 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ReservationService {
 
+	static final String OVERLAP_MESSAGE = "その時間はすでに予約があります";
+
 	private static final ZoneId TOKYO = ZoneId.of("Asia/Tokyo");
 
 	private final ReservationRepository reservations;
 	private final EmployeeRepository employees;
+	private final RoomRepository rooms;
 	private final Clock clock;
+	private final ReservationRules rules;
 
-	public ReservationService(ReservationRepository reservations, EmployeeRepository employees, Clock clock) {
+	public ReservationService(ReservationRepository reservations, EmployeeRepository employees,
+			RoomRepository rooms, Clock clock) {
 		this.reservations = reservations;
 		this.employees = employees;
+		this.rooms = rooms;
 		this.clock = clock;
+		this.rules = new ReservationRules(clock);
+	}
+
+	/**
+	 * 予約を作る。入力が決まりに反すれば 400、社員・会議室がなければ 404、重なる予約があれば 409。
+	 * Java で重なりを調べても、同時に押されるとすり抜けるので、DB の排他制約が最後の砦になる
+	 * （その拒否は ApiExceptionHandler が 409 に変える）。
+	 */
+	@Transactional
+	public ReservationResponse create(CreateReservationRequest request) {
+		if (request == null || request.employeeId() == null || request.roomId() == null) {
+			throw new BadRequestException("社員と会議室を指定してください");
+		}
+		rules.checkTime(request.startAt(), request.endAt());
+		var purpose = rules.cleanPurpose(request.purpose());
+
+		var employee = employees.findById(request.employeeId())
+				.orElseThrow(() -> new NotFoundException("社員が見つかりません"));
+		var room = rooms.findById(request.roomId())
+				.orElseThrow(() -> new NotFoundException("会議室が見つかりません"));
+
+		var start = request.startAt().toInstant();
+		var end = request.endAt().toInstant();
+		if (reservations.existsOverlap(room.getId(), start, end)) {
+			throw new ConflictException(OVERLAP_MESSAGE);
+		}
+		var saved = reservations.saveAndFlush(new Reservation(room, employee, start, end, purpose));
+		return new ReservationResponse(saved.getId(), room.getId(), employee.getId(), employee.getName(),
+				start, end, purpose);
 	}
 
 	/** その社員の、今から先（進行中を含む）の予約を、開始の早い順に返す。社員がいなければ 404。 */

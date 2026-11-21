@@ -10,7 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.time.Instant;
 
-/** 予約（DB の reservation 表）。この段階では読むだけ。 */
+/** 予約（DB の reservation 表）。 */
 @Entity
 public class Reservation {
 
@@ -35,5 +35,17 @@ public class Reservation {
 	private String purpose;
 
 	protected Reservation() {
+	}
+
+	public Reservation(Room room, Employee employee, Instant startAt, Instant endAt, String purpose) {
+		this.room = room;
+		this.employee = employee;
+		this.startAt = startAt;
+		this.endAt = endAt;
+		this.purpose = purpose;
+	}
+
+	public Long getId() {
+		return id;
 	}
 }

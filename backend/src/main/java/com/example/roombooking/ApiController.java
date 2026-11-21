@@ -1,12 +1,16 @@
 package com.example.roombooking;
 
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 画面から呼ばれる「見るだけ」の API。 */
+/** 画面から呼ばれる API。 */
 @RestController
 @RequestMapping("/api")
 public class ApiController {
@@ -56,5 +60,12 @@ public class ApiController {
 			return reservations.findUpcomingByEmployee(employeeId);
 		}
 		return reservations.findByDate(ReservationService.parseDate(date));
+	}
+
+	/** 予約を作る。成功は 201。 */
+	@PostMapping("/reservations")
+	@ResponseStatus(HttpStatus.CREATED)
+	ReservationResponse createReservation(@RequestBody CreateReservationRequest request) {
+		return reservations.create(request);
 	}
 }
