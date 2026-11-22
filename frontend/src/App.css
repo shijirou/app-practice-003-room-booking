@@ -105,8 +105,13 @@ header.top {
   display: inline-block;
   min-width: 182px; /* 日付が変わっても右の時刻の位置がずれない */
 }
+.navgroup {
+  position: relative; /* ミニカレンダーの位置と幅の基準（◀ の左端〜現在時刻の右端） */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .dategroup {
-  position: relative; /* ミニカレンダーの位置と幅の基準（日付ボタンの左端〜現在時刻の右端） */
   display: flex;
   align-items: center;
   gap: 12px;
