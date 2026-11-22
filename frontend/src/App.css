@@ -162,7 +162,26 @@ header.top {
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
 }
 .cal.faded {
-  opacity: 0.3; /* 外側を押したときは、閉じずに半透明（予約表を透かして見る） */
+  opacity: 0.3; /* カーソルが外に出たときは半透明（予約表を透かして見る） */
+}
+.cal::before {
+  /* 日付ボタンとの 6px のすき間も、カレンダーの一部として扱う（通ると半透明にならない） */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -8px;
+  height: 8px;
+}
+/* 翌月の日だけの行は縮める。点は数字の右に並べる */
+.day.compact {
+  height: 28px;
+  padding: 0;
+  font-size: 14px;
+  gap: 6px;
+}
+.day.compact .dots {
+  position: static;
 }
 .cal-head {
   display: flex;
@@ -672,7 +691,7 @@ button.rcard {
 /* ---------- 小窓（予約する・予約の内容）とお知らせ ---------- */
 .pop {
   position: absolute;
-  z-index: 20;
+  z-index: 28; /* ミニカレンダー（25）より前 */
   right: auto;
   margin: 0;
   width: 330px;

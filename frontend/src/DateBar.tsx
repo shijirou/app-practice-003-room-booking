@@ -29,15 +29,15 @@ export default function DateBar({
 }: Props) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  // 外側を押したときは閉じずに半透明にして、予約表を透かして見られるようにする
+  // カーソルが外に出たら半透明にして、予約表を透かして見られるようにする（戻ると濃くなる）
   const [faded, setFaded] = useState(false);
   const closeCalendar = useCallback(() => {
     setCalendarOpen(false);
     setFaded(false);
   }, []);
-  const fadeCalendar = useCallback(() => setFaded(true), []);
   const wakeCalendar = useCallback(() => setFaded(false), []);
-  useDismiss(calendarOpen, box, closeCalendar, true, fadeCalendar);
+  // 外側を押したら閉じる。ただし下の欄（予約の一覧）を押したときは、閉じずに操作を通す
+  useDismiss(calendarOpen, box, closeCalendar, true, ".lists");
 
   const away = date !== today;
   return (
@@ -62,7 +62,12 @@ export default function DateBar({
           ▶
         </button>
         <div className="dategroup">
-          <div className="datewrap" ref={box} onMouseEnter={wakeCalendar}>
+          <div
+            className="datewrap"
+            ref={box}
+            onMouseEnter={wakeCalendar}
+            onMouseLeave={() => setFaded(calendarOpen)}
+          >
             <button
               type="button"
               className="datepick"
