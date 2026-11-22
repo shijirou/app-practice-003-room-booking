@@ -1,20 +1,36 @@
 import { useEffect, type RefObject } from 'react'
 
-/** 小窓が開いているとき、外側を押す・Esc キーを押すと閉じる。box は、小窓と開くボタンをまとめて囲む要素。 */
-export function useDismiss(open: boolean, box: RefObject<HTMLElement | null>, close: () => void) {
+/**
+ * 小窓が開いているとき、外側を押す・Esc キーを押すと閉じる。box は、小窓と開くボタンをまとめて囲む要素。
+ * swallow が true なら、外側を押した操作は閉じるだけにして、下の表やボタンには通さない。
+ */
+export function useDismiss(open: boolean, box: RefObject<HTMLElement | null>, close: () => void, swallow = false) {
   useEffect(() => {
     if (!open) return
     const onMouseDown = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) close()
+      if (!box.current || box.current.contains(e.target as Node)) return
+      if (swallow) {
+        // 押した操作（mousedown とそのあとの click）を、下の要素に届けない
+        e.stopPropagation()
+        e.preventDefault()
+        const eat = (ev: Event) => {
+          ev.stopPropagation()
+          ev.preventDefault()
+        }
+        document.addEventListener('click', eat, { capture: true, once: true })
+        setTimeout(() => document.removeEventListener('click', eat, true), 400)
+      }
+      close()
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close()
     }
-    document.addEventListener('mousedown', onMouseDown)
+    // swallow のときは、下の要素より先に受けるため、捕まえる側（capture）で聞く
+    document.addEventListener('mousedown', onMouseDown, swallow)
     document.addEventListener('keydown', onKeyDown)
     return () => {
-      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('mousedown', onMouseDown, swallow)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [open, box, close])
+  }, [open, box, close, swallow])
 }

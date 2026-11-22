@@ -1,5 +1,5 @@
 import type { Reservation } from './api'
-import { CLOSE, OPEN, addDays, earliestStart, formatMinutes, minutesOf } from './time'
+import { CLOSE, OPEN, UNIT, addDays, earliestStart, formatMinutes, minutesOf } from './time'
 
 /** 予約する小窓に入力した内容。時刻は「0 時からの分」。 */
 export type Form = {
@@ -43,10 +43,7 @@ export function validateForm(form: Form, { today, nowMinutes, existing }: Contex
   return null
 }
 
-/** 空き枠を押したときの終了時刻。最大 1 時間で、次の予約の開始か閉館までにとどめる。 */
-export function defaultEnd(roomId: number, start: number, dayReservations: Reservation[]): number {
-  const nextStarts = dayReservations
-    .filter((r) => r.roomId === roomId && minutesOf(r.startAt) >= start)
-    .map((r) => minutesOf(r.startAt))
-  return Math.min(CLOSE, start + 60, ...nextStarts)
+/** 空き枠を押したときの終了時刻。30 分（1 枠）。空き枠は押せるので、次の予約や閉館を越えない。 */
+export function defaultEnd(start: number): number {
+  return Math.min(CLOSE, start + UNIT)
 }
