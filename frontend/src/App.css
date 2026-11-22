@@ -170,7 +170,9 @@ header.top {
   line-height: 1;
 }
 .cal-title {
-  padding: 0 4px;
+  /* 年月の左端を、上の日付ボタンの文字の左端に揃える（日付ボタンの枠 1px＋余白 12px ＝ 13px、小窓の枠 1px＋余白 16px ＝ 17px の差 4px） */
+  margin: 0 8px 0 -4px;
+  padding: 0;
   font-weight: bold;
   font-size: 20px;
   white-space: nowrap;
