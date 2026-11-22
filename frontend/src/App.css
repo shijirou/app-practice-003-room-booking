@@ -174,13 +174,13 @@ header.top {
   height: 8px;
 }
 /* 翌月の日だけの行は縮める。点は数字の右に並べる */
-.day.compact {
-  height: 28px;
-  padding: 0;
-  font-size: 14px;
+/* 行数が多い月（6 行）は、マスが低いので、点を数字の右に並べる */
+.cal-grid.dense .day {
+  font-size: 16px;
   gap: 6px;
+  padding: 0;
 }
-.day.compact .dots {
+.cal-grid.dense .dots {
   position: static;
 }
 .cal-head {
@@ -190,6 +190,8 @@ header.top {
   margin-bottom: 10px;
 }
 .cal-head button {
+  flex: none;
+  white-space: nowrap; /* 「今月」が 2 行に折れないように */
   height: 38px;
   font-size: 16px;
   display: inline-flex;
@@ -201,7 +203,7 @@ header.top {
 .cal-title {
   padding: 0 4px 0 10px;
   font-weight: bold;
-  font-size: 20px;
+  font-size: 18px;
   white-space: nowrap;
   line-height: 38px;
 }
@@ -244,13 +246,13 @@ header.top {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 48px;
+  height: var(--row-h, 48px);
   border: 3px solid transparent; /* 今日の枠と同じ太さ。色は今日だけ青 */
   border-radius: 6px;
   background: none;
   background-clip: padding-box; /* 色の面は、この枠の内側だけ（今日の枠の太さの分、小さくなる） */
-  padding: 0 0 6px; /* 数字を少し上げて、下の点と重ならないようにする */
-  font-size: 19px;
+  padding: 0 0 9px; /* 数字を少し上げて、下の点と重ならないようにする */
+  font-size: 18px;
 }
 .day:hover:not(.sel),
 .day.today:hover {
@@ -314,14 +316,14 @@ header.top {
   border-bottom: 7px solid var(--sub);
 }
 .cal-legend {
-  margin-top: 10px;
-  font-size: 14px;
+  margin-right: 4px;
+  font-size: 12px;
+  white-space: nowrap;
   color: var(--sub);
-  text-align: center;
 }
 .cal-legend .dot {
   display: inline-block;
-  margin: 0 4px 0 10px;
+  margin: 0 3px 0 8px;
   vertical-align: middle;
 }
 
