@@ -412,6 +412,56 @@ describe('App', () => {
       await userEvent.click(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
+
+    it('ドラッグで長い時間を選ぶと、薄い青になり、離すとその範囲で小窓が開く（右から左も同じ）', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      fireEvent.mouseDown(freeCell('10:00'))
+      fireEvent.mouseOver(freeCell('11:30'))
+      expect(freeCell('11:00')).toHaveClass('sel')
+      expect(freeCell('12:00')).not.toHaveClass('sel')
+      fireEvent.mouseUp(document)
+      let dialog = screen.getByRole('dialog', { name: '予約' })
+      expect(within(dialog).getByLabelText('開始')).toHaveValue('600')
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('720') // 10:00〜12:00
+      fireEvent.click(within(dialog).getByRole('button', { name: 'やめる' }))
+
+      fireEvent.mouseDown(freeCell('15:00'))
+      fireEvent.mouseOver(freeCell('13:00'))
+      fireEvent.mouseUp(document)
+      dialog = screen.getByRole('dialog', { name: '予約' })
+      expect(within(dialog).getByLabelText('開始')).toHaveValue('780') // 13:00〜15:30
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('930')
+    })
+
+    it('ドラッグが予約済みと重なると赤くなり、離すとお知らせが出て小窓は開かない', async () => {
+      mockApi({ day: () => json([reservation({ purpose: '営業定例' })]) }) // 10:00〜11:30
+      render(<App now={now} />)
+      const busy = await screen.findByText('営業定例（田中）')
+
+      fireEvent.mouseDown(freeCell('9:30'))
+      fireEvent.mouseOver(busy)
+      expect(busy).toHaveClass('bad')
+      fireEvent.mouseUp(document)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByText('その時間はすでに予約があります')).toBeInTheDocument()
+      expect(busy).not.toHaveClass('bad')
+    })
+
+    it('ほかの会議室や過去の枠の上を通っても、選ぶ範囲は変わらない', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      fireEvent.mouseDown(freeCell('10:00'))
+      fireEvent.mouseOver(screen.getAllByRole('cell', { name: '12:00 空き' })[1]) // 会議室 B
+      fireEvent.mouseOver(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
+      fireEvent.mouseUp(document)
+      const dialog = screen.getByRole('dialog', { name: '予約' })
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('660') // 押しただけと同じ 10:00〜11:00
+    })
   })
 
   describe('予約の内容', () => {
