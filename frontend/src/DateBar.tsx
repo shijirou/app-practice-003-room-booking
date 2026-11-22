@@ -35,53 +35,55 @@ export default function DateBar({
   const away = date !== today;
   return (
     <div className="datebar">
-      <button
-        type="button"
-        aria-label="前の日"
-        onClick={() => onChange(addDays(date, -1))}
-      >
-        ◀
-      </button>
-      <button type="button" onClick={() => onChange(today)}>
-        今日
-      </button>
-      <button
-        type="button"
-        aria-label="次の日"
-        onClick={() => onChange(addDays(date, 1))}
-      >
-        ▶
-      </button>
-      {/* 日付ボタンと現在時刻をまとめる。ミニカレンダーは、この枠の左右の端に合わせて開く */}
-      <div className="dategroup">
-        <div className="datewrap" ref={box}>
-          <button
-            type="button"
-            className="datepick"
-            title="押すとカレンダーを開きます"
-            aria-haspopup="dialog"
-            aria-expanded={calendarOpen}
-            onClick={() => setCalendarOpen((open) => !open)}
-          >
-            <span className="label">{formatDateLabel(date)}</span>
-            <span aria-hidden="true">📅</span>
-          </button>
-          {calendarOpen && (
-            <Calendar
-              date={date}
-              today={today}
-              onSelect={onChange}
-              onClose={closeCalendar}
-              selfId={selfId}
-              reloadKey={reloadKey}
-            />
-          )}
+      {/* 「◀ 今日 ▶ 日付 現在時刻」をまとめる。ミニカレンダーは、この枠の左右の端（◀ の左端〜現在時刻の右端）に合わせて開く */}
+      <div className="navgroup">
+        <button
+          type="button"
+          aria-label="前の日"
+          onClick={() => onChange(addDays(date, -1))}
+        >
+          ◀
+        </button>
+        <button type="button" onClick={() => onChange(today)}>
+          今日
+        </button>
+        <button
+          type="button"
+          aria-label="次の日"
+          onClick={() => onChange(addDays(date, 1))}
+        >
+          ▶
+        </button>
+        <div className="dategroup">
+          <div className="datewrap" ref={box}>
+            <button
+              type="button"
+              className="datepick"
+              title="押すとカレンダーを開きます"
+              aria-haspopup="dialog"
+              aria-expanded={calendarOpen}
+              onClick={() => setCalendarOpen((open) => !open)}
+            >
+              <span className="label">{formatDateLabel(date)}</span>
+              <span aria-hidden="true">📅</span>
+            </button>
+            {calendarOpen && (
+              <Calendar
+                date={date}
+                today={today}
+                onSelect={onChange}
+                onClose={closeCalendar}
+                selfId={selfId}
+                reloadKey={reloadKey}
+              />
+            )}
+          </div>
+          <span className={`clock${away ? " away" : ""}`}>
+            {away
+              ? `現在 ${formatMinutes(nowMinutes)}　今日 ${formatShortDate(today)}`
+              : `現在 ${formatMinutes(nowMinutes)}`}
+          </span>
         </div>
-        <span className={`clock${away ? " away" : ""}`}>
-          {away
-            ? `現在 ${formatMinutes(nowMinutes)}　今日 ${formatShortDate(today)}`
-            : `現在 ${formatMinutes(nowMinutes)}`}
-        </span>
       </div>
     </div>
   );
