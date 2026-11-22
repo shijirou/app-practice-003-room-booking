@@ -362,6 +362,16 @@ header.top {
   color: var(--blue);
   font-weight: bold;
 }
+.timetable td.free.sel,
+.timetable td.free.sel:hover,
+.timetable tr.alt td.free.sel {
+  background: #b9d5f5; /* ドラッグで選んでいる範囲 */
+}
+.timetable td.bad,
+.timetable td.bad:hover {
+  background: #e5484d; /* ドラッグが予約済みと重なった部分 */
+  color: #fff;
+}
 .timetable td.draft {
   background: #dbe9fb;
   border: 2px dashed var(--blue);

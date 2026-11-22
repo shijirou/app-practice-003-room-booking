@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Reservation, Room } from './api'
 import { CLOSE, OPEN, UNIT, earliestStart, formatMinutes, minutesOf } from './time'
 
@@ -19,10 +20,25 @@ type Props = {
   onHover: (id: number | null) => void
   /** 小窓で入力中の予約（点線の枠で仮表示する）。見ている日のものだけ渡す */
   draft: { roomId: number; start: number; end: number } | null
-  /** 空き枠を押したとき */
+  /** 空き枠を押して、そのまま離したとき（最大 1 時間で小窓を開く） */
   onFreeClick: (roomId: number, start: number, rect: DOMRect) => void
+  /** 空き枠をドラッグして、start〜end を選んで離したとき */
+  onFreeDrag: (roomId: number, start: number, end: number, rect: DOMRect) => void
+  /** ドラッグが予約済みと重なったまま離したとき */
+  onDragBlocked: () => void
   /** 予約済みの枠を押したとき */
   onReservationClick: (reservation: Reservation, rect: DOMRect) => void
+}
+
+type Drag = {
+  roomId: number
+  anchor: number
+  lo: number
+  hi: number
+  /** 予約済みと重なっているか。重なっているときの範囲が badLo〜badHi */
+  bad: boolean
+  badLo: number
+  badHi: number
 }
 
 const HOURS = Array.from({ length: (CLOSE - OPEN) / 60 }, (_, i) => OPEN + i * 60)
@@ -43,10 +59,55 @@ export default function Timetable({
   onHover,
   draft,
   onFreeClick,
+  onFreeDrag,
+  onDragBlocked,
   onReservationClick,
 }: Props) {
   const firstStart = earliestStart(date, today, nowMinutes)
   const showNow = date === today && nowMinutes >= OPEN && nowMinutes < CLOSE
+
+  // ドラッグ中の状態。anchor は押した枠の開始。lo〜hi は選んでいる範囲（重なったときは最後に重ならなかった範囲のまま）
+  const [drag, setDrag] = useState<Drag | null>(null)
+  const dragRef = useRef<Drag | null>(null)
+  const latest = useRef({ onFreeClick, onFreeDrag, onDragBlocked })
+  useEffect(() => {
+    latest.current = { onFreeClick, onFreeDrag, onDragBlocked }
+  })
+  const update = (d: Drag | null) => {
+    dragRef.current = d
+    setDrag(d)
+  }
+
+  // 表の外で離しても、ドラッグを終わらせる
+  useEffect(() => {
+    const finish = () => {
+      const d = dragRef.current
+      if (d === null) return
+      dragRef.current = null
+      setDrag(null)
+      const { onFreeClick, onFreeDrag, onDragBlocked } = latest.current
+      if (d.bad) return onDragBlocked()
+      const cell = document.querySelector(`td[data-room="${d.roomId}"][data-m="${d.lo}"]`)
+      if (cell === null) return
+      const rect = cell.getBoundingClientRect()
+      if (d.lo === d.anchor && d.hi === d.anchor + UNIT) onFreeClick(d.roomId, d.anchor, rect)
+      else onFreeDrag(d.roomId, d.lo, d.hi, rect)
+    }
+    document.addEventListener('mouseup', finish)
+    return () => document.removeEventListener('mouseup', finish)
+  }, [])
+
+  /** ドラッグ中に、同じ会議室の枠（cm〜ce）の上に来た */
+  const extend = (roomId: number, cm: number, ce: number) => {
+    const d = dragRef.current
+    if (d === null || d.roomId !== roomId) return
+    const lo = Math.min(d.anchor, cm)
+    const hi = Math.max(d.anchor + UNIT, ce)
+    const bad = reservations.some(
+      (r) => r.roomId === roomId && minutesOf(r.startAt) < hi && minutesOf(r.endAt) > lo,
+    )
+    update(bad ? { ...d, bad, badLo: lo, badHi: hi } : { ...d, lo, hi, bad: false })
+  }
 
   return (
     <div className="gridwrap">
@@ -99,7 +160,10 @@ export default function Timetable({
       for (; cursor < until; cursor += UNIT) {
         const start = cursor
         const past = cursor + UNIT <= firstStart
-        const classes = [past ? 'past' : 'free', cursor % 60 === 0 ? 'hr' : ''].filter(Boolean).join(' ')
+        const selected = drag !== null && drag.roomId === roomId && start >= drag.lo && start < drag.hi
+        const classes = [past ? 'past' : 'free', cursor % 60 === 0 ? 'hr' : '', selected ? 'sel' : '']
+          .filter(Boolean)
+          .join(' ')
         cells.push(
           <td
             key={`free-${cursor}`}
@@ -107,7 +171,18 @@ export default function Timetable({
             title={past ? '過去の時間は予約できません' : undefined}
             aria-label={`${formatMinutes(cursor)} ${past ? '過去' : '空き'}`}
             data-testid={past ? 'past' : 'free'}
-            onClick={past ? undefined : (e) => onFreeClick(roomId, start, e.currentTarget.getBoundingClientRect())}
+            data-room={past ? undefined : roomId}
+            data-m={past ? undefined : start}
+            onMouseDown={
+              past
+                ? undefined
+                : (e) => {
+                    if (e.button !== 0) return
+                    e.preventDefault()
+                    update({ roomId, anchor: start, lo: start, hi: start + UNIT, bad: false, badLo: 0, badHi: 0 })
+                  }
+            }
+            onMouseEnter={past ? undefined : () => extend(roomId, start, start + UNIT)}
           />,
         )
       }
@@ -140,6 +215,7 @@ export default function Timetable({
         r.employeeId === selfId ? 'mine' : 'busy',
         r.id === highlightId ? 'hl' : '',
         r.id === flashId ? 'flash' : '',
+        drag !== null && drag.bad && drag.roomId === roomId && start < drag.badHi && end > drag.badLo ? 'bad' : '',
       ]
         .filter(Boolean)
         .join(' ')
@@ -152,7 +228,10 @@ export default function Timetable({
           data-testid="reservation"
           data-id={r.id}
           onClick={(e) => onReservationClick(r, e.currentTarget.getBoundingClientRect())}
-          onMouseEnter={() => onHover(r.id)}
+          onMouseEnter={() => {
+            extend(roomId, start, end)
+            onHover(r.id)
+          }}
           onMouseLeave={() => onHover(null)}
         >
           {purpose}（{r.employeeName.replace('架空', '')}）

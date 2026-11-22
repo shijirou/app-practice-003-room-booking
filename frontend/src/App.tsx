@@ -109,6 +109,11 @@ export default function App({ now = () => new Date() }: Props) {
     setPopup({ kind: 'new', form, pos: placePopup(rect, RESERVE_HEIGHT) })
   }
 
+  /** ドラッグで範囲を選んだ。その範囲で小窓を開く */
+  const openDrag = (roomId: number, start: number, end: number, rect: DOMRect) => {
+    setPopup({ kind: 'new', form: { roomId, date, start, end, purpose: '' }, pos: placePopup(rect, RESERVE_HEIGHT) })
+  }
+
   const openView = (reservation: Reservation, rect: DOMRect) => {
     setPopup({ kind: 'view', reservation, pos: placePopup(rect, DETAIL_HEIGHT) })
   }
@@ -148,7 +153,7 @@ export default function App({ now = () => new Date() }: Props) {
     base.status === 'error' ? base.message : reservations.status === 'error' ? reservations.message : null
   const firstStart = earliestStart(date, today, nowMinutes)
   const hint =
-    '空き枠を押して予約。8:00〜20:00・30 分刻み。' +
+    '空き枠を押して予約（ドラッグで長い時間も）。8:00〜20:00・30 分刻み。' +
     (date !== today
       ? ''
       : firstStart >= CLOSE
@@ -224,6 +229,8 @@ export default function App({ now = () => new Date() }: Props) {
               onHover={setHighlightId}
               draft={draft}
               onFreeClick={openNew}
+              onFreeDrag={openDrag}
+              onDragBlocked={() => showToast('その時間はすでに予約があります')}
               onReservationClick={openView}
             />
           )
