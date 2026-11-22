@@ -219,6 +219,21 @@ describe('App', () => {
     expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
   })
 
+  it('下の欄の白い背景部分を押すと、カレンダーは閉じる（タブや予約カードのときは閉じない）', async () => {
+    mockApi({
+      upcoming: () => json([reservation({ id: 300, startAt: '2026-12-25T10:00:00+09:00', endAt: '2026-12-25T11:00:00+09:00', purpose: '年末会議' })]),
+    })
+    render(<App now={now} />)
+    await screen.findByText('会議室A（4名）')
+
+    await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
+    await userEvent.click(await screen.findByRole('tab', { name: /の予約（みんな）/ })) // タブは閉じない
+    expect(screen.getByRole('dialog', { name: 'カレンダー' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tabpanel')) // 白い背景部分
+    expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
+  })
+
   it('カレンダーを開いたまま、下の欄の予約を押すと、その日に移り、カレンダーは閉じない', async () => {
     mockApi({
       upcoming: () =>
