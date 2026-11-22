@@ -58,11 +58,9 @@ describe('validateForm（API と同じ決まり）', () => {
 })
 
 describe('defaultEnd', () => {
-  it('最大 1 時間。次の予約の開始か閉館までにとどめる', () => {
-    expect(defaultEnd(10, 10 * 60, [])).toBe(11 * 60)
-    expect(defaultEnd(10, 10 * 60, [reservation(10, '10:30', '11:30')])).toBe(10 * 60 + 30)
-    expect(defaultEnd(10, 10 * 60, [reservation(11, '10:30', '11:30')])).toBe(11 * 60) // 別の会議室
-    expect(defaultEnd(10, 19 * 60 + 30, [])).toBe(20 * 60) // 閉館まで
+  it('30 分（1 枠）。閉館は越えない', () => {
+    expect(defaultEnd(10 * 60)).toBe(10 * 60 + 30)
+    expect(defaultEnd(19 * 60 + 30)).toBe(20 * 60)
   })
 })
 

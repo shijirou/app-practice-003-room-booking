@@ -53,7 +53,7 @@ export default function Lists(props: Props) {
           className={`tab${tab === 'mine' ? ' on' : ''}`}
           onClick={() => setTab('mine')}
         >
-          自分（{selfName}）の予約（今後）{upcoming.status === 'ok' ? `${mine.length}件` : ''}
+          自分（{selfName}）の予約（全）{upcoming.status === 'ok' ? `${mine.length}件` : ''}
         </button>
         <button
           type="button"

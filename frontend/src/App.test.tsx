@@ -154,6 +154,21 @@ describe('App', () => {
     expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
   })
 
+  it('カレンダーの外を押すと閉じるだけで、下の表には押した操作が届かない', async () => {
+    mockApi()
+    render(<App now={now} />)
+    await screen.findByText('会議室A（4名）')
+
+    await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
+    expect(screen.getByRole('dialog', { name: 'カレンダー' })).toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0])
+    expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument() // 表の枠は反応しない
+
+    await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0]) // 閉じたあとは、ふつうに押せる
+    expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
+  })
+
   it('「？」で色の説明が開き、Esc で閉じる', async () => {
     mockApi()
     render(<App now={now} />)
@@ -191,7 +206,7 @@ describe('App', () => {
     })
     render(<App now={now} />)
 
-    const mineTab = await screen.findByRole('tab', { name: '自分（田中架空）の予約（今後）2件' })
+    const mineTab = await screen.findByRole('tab', { name: '自分（田中架空）の予約（全）2件' })
     expect(mineTab).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByText('会議室A ／ 朝会')).toBeInTheDocument()
     expect(screen.getByText('進行中')).toBeInTheDocument()
@@ -276,7 +291,7 @@ describe('App', () => {
     /** 会議室 A の、指定した時刻の空き枠 */
     const freeCell = (time: string) => screen.getAllByRole('cell', { name: time + ' 空き' })[0]
 
-    it('空き枠を押すと 1 時間の小窓が開き、仮表示が出て、予約すると送って表を取り直し、お知らせを出す', async () => {
+    it('空き枠を押すと 30 分の小窓が開き、仮表示が出て、予約すると送って表を取り直し、お知らせを出す', async () => {
       let created = false
       const calls = mockApi({
         day: () => json(created ? [reservation({ id: 200, purpose: '打合せ' })] : []),
@@ -291,8 +306,8 @@ describe('App', () => {
       await userEvent.click(freeCell('10:00'))
       const dialog = screen.getByRole('dialog', { name: '予約' })
       expect(within(dialog).getByLabelText('開始')).toHaveValue('600')
-      expect(within(dialog).getByLabelText('終了')).toHaveValue('660') // 最大 1 時間
-      expect(screen.getByText('10:00〜11:00 予約中…')).toHaveClass('draft')
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('630') // 30 分
+      expect(screen.getByText('10:00〜10:30 予約中…')).toHaveClass('draft')
 
       await userEvent.selectOptions(within(dialog).getByLabelText('終了'), '690')
       expect(screen.getByText('10:00〜11:30 予約中…')).toBeInTheDocument()
@@ -460,7 +475,7 @@ describe('App', () => {
       fireEvent.mouseOver(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
       fireEvent.mouseUp(document)
       const dialog = screen.getByRole('dialog', { name: '予約' })
-      expect(within(dialog).getByLabelText('終了')).toHaveValue('660') // 押しただけと同じ 10:00〜11:00
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('630') // 押しただけと同じ 10:00〜10:30
     })
   })
 

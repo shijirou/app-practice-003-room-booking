@@ -102,10 +102,9 @@ export default function App({ now = () => new Date() }: Props) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  /** 空き枠を押した。その開始から、最大 1 時間（次の予約・閉館まで）で小窓を開く */
+  /** 空き枠を押した。その開始から、30 分（1 枠）で小窓を開く */
   const openNew = (roomId: number, start: number, rect: DOMRect) => {
-    const day = reservations.status === 'ok' ? reservations.data : []
-    const form: Form = { roomId, date, start, end: defaultEnd(roomId, start, day), purpose: '' }
+    const form: Form = { roomId, date, start, end: defaultEnd(start), purpose: '' }
     setPopup({ kind: 'new', form, pos: placePopup(rect, RESERVE_HEIGHT) })
   }
 
@@ -167,29 +166,28 @@ export default function App({ now = () => new Date() }: Props) {
 
   return (
     <div className="wrap">
-      <header className="top">
-        <h1>会議室予約</h1>
-        <label className="loginbar">
-          ログイン中（仮）
-          <select
-            value={selfId ?? ''}
-            onChange={(e) => {
-              setChosenId(Number(e.target.value))
-              setPopup(null)
-            }}
-            disabled={base.status !== 'ok'}
-          >
-            {base.status === 'ok' &&
-              base.data.employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
-                </option>
-              ))}
-          </select>
-        </label>
-      </header>
-
       <section className="card">
+        <header className="top">
+          <h1>会議室予約表</h1>
+          <label className="loginbar">
+            ログイン中（仮）
+            <select
+              value={selfId ?? ''}
+              onChange={(e) => {
+                setChosenId(Number(e.target.value))
+                setPopup(null)
+              }}
+              disabled={base.status !== 'ok'}
+            >
+              {base.status === 'ok' &&
+                base.data.employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </header>
         <DateBar
           date={date}
           today={today}
