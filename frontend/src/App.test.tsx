@@ -188,7 +188,7 @@ describe('App', () => {
     await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
     const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
     await waitFor(() => expect(within(calendar).getAllByTestId('dot-mine')).toHaveLength(2))
-    expect(calls).toContain('/api/reservation-days?from=2026-11-01&to=2026-12-12')
+    expect(calls).toContain('/api/reservation-days?from=2026-11-01&to=2026-12-05')
     const day = (d: string) => calendar.querySelector(`[data-date="${d}"]`) as HTMLElement
     expect(within(day('2026-11-20')).getByTestId('dot-mine')).toBeInTheDocument()
     expect(within(day('2026-11-20')).getByTestId('dot-other')).toBeInTheDocument() // 両方あれば 2 つ

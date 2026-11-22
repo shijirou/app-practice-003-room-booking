@@ -40,7 +40,13 @@ export default function Calendar({
     setMonth(Number(date.slice(5, 7)));
   }
 
-  const cells = calendarDays(year, month);
+  // 翌月の日だけの週（最終行）は出さない。行数が多い月は、マスを縮めて全体の高さをおさえる
+  const all = calendarDays(year, month);
+  const weekCount = Array.from({ length: 6 }, (_, w) =>
+    all.slice(w * 7, w * 7 + 7),
+  ).filter((week) => week.some((d) => Number(d.slice(5, 7)) === month)).length;
+  const cells = all.slice(0, weekCount * 7);
+  const rowHeight = weekCount <= 4 ? 40 : weekCount === 5 ? 36 : 30;
   const loaded = useLoaded(
     fetchReservationDays,
     `${cells[0]}~${cells[cells.length - 1]}`,
@@ -86,6 +92,12 @@ export default function Calendar({
           {year}年{month}月
         </div>
         <span className="spacer" />
+        <div className="cal-legend">
+          <span className="dot mine" />
+          自分の予約
+          <span className="dot other" />
+          ほかの人の予約
+        </div>
         <button
           type="button"
           className="cal-x"
@@ -96,7 +108,10 @@ export default function Calendar({
           ×
         </button>
       </div>
-      <div className="cal-grid">
+      <div
+        className={`cal-grid${weekCount >= 6 ? " dense" : ""}`}
+        style={{ "--row-h": `${rowHeight}px` } as React.CSSProperties}
+      >
         {WEEKDAYS.map((w, i) => (
           <div
             key={w}
@@ -105,18 +120,11 @@ export default function Calendar({
             {w}
           </div>
         ))}
-        {cells.map((d, index) => {
-          // 翌月の日だけの行は、縮めて表示する
-          const week = cells.slice(
-            Math.floor(index / 7) * 7,
-            Math.floor(index / 7) * 7 + 7,
-          );
-          const compact = week.every((w) => Number(w.slice(5, 7)) !== month);
+        {cells.map((d) => {
           const dow = weekdayOf(d);
           const cls = [
             "day",
             Number(d.slice(5, 7)) !== month ? "out" : "",
-            compact ? "compact" : "",
             d === today ? "today" : "",
             d === date ? "sel" : "",
             dow === 0 ? "sun" : dow === 6 ? "sat" : "",
@@ -153,12 +161,6 @@ export default function Calendar({
             </button>
           );
         })}
-      </div>
-      <div className="cal-legend">
-        <span className="dot mine" />
-        自分の予約
-        <span className="dot other" />
-        ほかの人の予約
       </div>
     </dialog>
   );
