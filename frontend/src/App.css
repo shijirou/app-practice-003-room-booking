@@ -223,8 +223,8 @@ header.top {
   padding: 0 0 6px; /* 数字を少し上げて、下の点と重ならないようにする */
   font-size: 19px;
 }
-.day:hover {
-  background: #e3eefb;
+.day:not(.today):hover {
+  border-color: #e6c46a; /* カーソルを重ねた日は黄色い枠（選んだ日の黄色とそろえる）。今日は青い枠のまま */
 }
 .day.sun {
   color: var(--red);
@@ -256,6 +256,12 @@ header.top {
   justify-content: center;
   align-items: flex-end;
   gap: 4px;
+}
+.slot {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 8px;
 }
 .dot {
   width: 6px;
