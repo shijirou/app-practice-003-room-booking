@@ -104,14 +104,18 @@ header.top {
   display: inline-block;
   min-width: 182px; /* 日付が変わっても右の時刻の位置がずれない */
 }
-.datewrap {
-  position: relative;
+.dategroup {
+  position: relative; /* ミニカレンダーの位置と幅の基準（日付ボタンの左端〜現在時刻の右端） */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 8px;
 }
 .datepick {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 0 4px 0 8px;
+  margin: 0;
   padding: 3px 12px;
 }
 .datepick:hover {
@@ -140,23 +144,24 @@ header.top {
   color: inherit;
   position: absolute;
   top: calc(100% + 6px);
-  left: 8px;
+  left: 0;
+  right: 0;
   z-index: 25;
-  width: 320px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 12px;
+  padding: 16px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
 }
 .cal-head {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 .cal-head button {
-  height: 30px;
+  height: 38px;
+  font-size: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -166,18 +171,19 @@ header.top {
 .cal-title {
   padding: 0 4px;
   font-weight: bold;
+  font-size: 20px;
   white-space: nowrap;
-  line-height: 30px;
+  line-height: 38px;
 }
 .cal-head .spacer {
   flex: 1;
 }
 .cal-head .cal-x {
-  width: 30px;
+  width: 38px;
   padding: 0;
   border: none;
   background: none;
-  font-size: 22px;
+  font-size: 28px;
   color: var(--sub);
 }
 .cal-head .cal-x:hover {
@@ -193,8 +199,8 @@ header.top {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
-  font-size: 12px;
+  height: 30px;
+  font-size: 15px;
   color: var(--sub);
 }
 .cal-grid .sun {
@@ -208,12 +214,12 @@ header.top {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  height: 48px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: none;
   padding: 0;
-  font-size: 14px;
+  font-size: 19px;
 }
 .day:hover {
   background: #e3eefb;
@@ -241,14 +247,14 @@ header.top {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 3px;
+  bottom: 4px;
   display: flex;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
 }
 .dot {
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
 }
 .dot.mine {
@@ -264,8 +270,8 @@ header.top {
   background: rgba(255, 255, 255, 0.7);
 }
 .cal-legend {
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 14px;
   color: var(--sub);
   text-align: center;
 }
@@ -598,7 +604,7 @@ button.rcard {
   cursor: pointer;
 }
 .rcard.done {
-  opacity: 0.55;
+  opacity: 0.8; /* 終わった予約も、読める濃さに */
 }
 .rcard .rtime {
   font-weight: bold;
