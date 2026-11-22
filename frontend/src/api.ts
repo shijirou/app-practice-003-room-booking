@@ -72,6 +72,15 @@ export const fetchRooms = () => getJson<Room[]>('/api/rooms')
 export const fetchReservations = (date: string) =>
   getJson<Reservation[]>(`/api/reservations?date=${encodeURIComponent(date)}`)
 
+/** 予約がある日と、予約した社員の番号（カレンダーの点用） */
+export type DayReservations = { date: string; employeeIds: number[] }
+
+/** "2026-11-01~2026-12-12" の形（from~to、両端を含む）の期間で、予約がある日を調べる */
+export const fetchReservationDays = (range: string) => {
+  const [from, to] = range.split('~')
+  return getJson<DayReservations[]>(`/api/reservation-days?from=${from}&to=${to}`)
+}
+
 /** その社員の、今から先（進行中を含む）の予約 */
 export const fetchUpcoming = (employeeId: number) =>
   getJson<Reservation[]>(`/api/reservations?employeeId=${employeeId}`)

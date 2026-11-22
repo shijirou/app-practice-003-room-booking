@@ -5,6 +5,9 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.time.temporal.ChronoUnit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,6 +76,32 @@ public class ReservationService {
 		var from = date.atStartOfDay(TOKYO).toInstant();
 		var to = date.plusDays(1).atStartOfDay(TOKYO).toInstant();
 		return reservations.findStartingBetween(from, to);
+	}
+
+	/** 予約がある日ごとの、予約した社員の番号の一覧（カレンダーの点用）。 */
+	public record DayReservations(LocalDate date, List<Long> employeeIds) {
+	}
+
+	private static final int MAX_DAYS = 62;
+
+	/** from〜to（両端を含む）の日のうち、予約がある日だけを日付順に返す。期間は 62 日まで。 */
+	@Transactional(readOnly = true)
+	public List<DayReservations> findDays(LocalDate from, LocalDate to) {
+		if (to.isBefore(from)) {
+			throw new BadRequestException("from は to と同じか、それより前の日にしてください");
+		}
+		if (ChronoUnit.DAYS.between(from, to) >= MAX_DAYS) {
+			throw new BadRequestException("期間は " + MAX_DAYS + " 日までにしてください");
+		}
+		var found = reservations.findStartingBetween(from.atStartOfDay(TOKYO).toInstant(),
+				to.plusDays(1).atStartOfDay(TOKYO).toInstant());
+		var byDate = new TreeMap<LocalDate, TreeSet<Long>>();
+		for (var r : found) {
+			byDate.computeIfAbsent(r.startAt().toLocalDate(), d -> new TreeSet<>()).add(r.employeeId());
+		}
+		return byDate.entrySet().stream()
+				.map(e -> new DayReservations(e.getKey(), List.copyOf(e.getValue())))
+				.toList();
 	}
 
 	/** "2026-11-20" の形の文字を日付にする。形が違えば 400。 */

@@ -194,6 +194,8 @@ export default function App({ now = () => new Date() }: Props) {
           date={date}
           today={today}
           nowMinutes={nowMinutes}
+          selfId={selfId}
+          reloadKey={retry + reload}
           onChange={(d) => {
             setDate(d)
             setHighlightId(null)

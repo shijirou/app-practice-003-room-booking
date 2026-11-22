@@ -141,4 +141,36 @@ class ReadApiTest {
 		mvc.perform(get("/api/reservations").param("date", "2026-02-30"))
 				.andExpect(status().isBadRequest());
 	}
+
+	@Test
+	void 予約がある日だけを日付順に返し社員の番号は重ならない() throws Exception {
+		long sato = jdbc.queryForObject("SELECT id FROM employee WHERE name = '佐藤架空'", Long.class);
+		insert(roomA, "2026-12-03T10:00:00+09:00", "2026-12-03T11:00:00+09:00", null);
+		insert(roomB, "2026-12-03T13:00:00+09:00", "2026-12-03T14:00:00+09:00", null);
+		jdbc.update("INSERT INTO reservation (room_id, employee_id, start_at, end_at) VALUES (?, ?, ?::timestamptz, ?::timestamptz)",
+				roomA, sato, "2026-12-01T09:00:00+09:00", "2026-12-01T10:00:00+09:00");
+		// 期間の外（前日の最後・翌日の最初）は含まれない
+		insert(roomA, "2026-11-30T19:30:00+09:00", "2026-11-30T20:00:00+09:00", null);
+		insert(roomA, "2026-12-04T08:00:00+09:00", "2026-12-04T09:00:00+09:00", null);
+
+		mvc.perform(get("/api/reservation-days").param("from", "2026-12-01").param("to", "2026-12-03"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(2))
+				.andExpect(jsonPath("$[0].date").value("2026-12-01"))
+				.andExpect(jsonPath("$[0].employeeIds[0]").value(sato))
+				.andExpect(jsonPath("$[1].date").value("2026-12-03"))
+				.andExpect(jsonPath("$[1].employeeIds.length()").value(1))
+				.andExpect(jsonPath("$[1].employeeIds[0]").value(tanaka));
+	}
+
+	@Test
+	void 予約の日の期間が逆か長すぎると400() throws Exception {
+		mvc.perform(get("/api/reservation-days").param("from", "2026-12-03").param("to", "2026-12-01"))
+				.andExpect(status().isBadRequest());
+		mvc.perform(get("/api/reservation-days").param("from", "2026-01-01").param("to", "2026-12-31"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("期間は 62 日までにしてください"));
+		mvc.perform(get("/api/reservation-days").param("from", "2026/12/01").param("to", "2026-12-03"))
+				.andExpect(status().isBadRequest());
+	}
 }

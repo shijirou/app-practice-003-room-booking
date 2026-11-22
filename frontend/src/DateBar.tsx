@@ -8,10 +8,13 @@ type Props = {
   today: string
   nowMinutes: number
   onChange: (date: string) => void
+  selfId: number | null
+  /** 予約を作ったあとなどに増やして、カレンダーの点を読み直す */
+  reloadKey: number
 }
 
 /** 日付を動かすバー（前の日・今日・次の日・カレンダー）と、現在時刻の表示。 */
-export default function DateBar({ date, today, nowMinutes, onChange }: Props) {
+export default function DateBar({ date, today, nowMinutes, onChange, selfId, reloadKey }: Props) {
   const [calendarOpen, setCalendarOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const closeCalendar = useCallback(() => setCalendarOpen(false), [])
@@ -41,7 +44,16 @@ export default function DateBar({ date, today, nowMinutes, onChange }: Props) {
           <span className="label">{formatDateLabel(date)}</span>
           <span aria-hidden="true">📅</span>
         </button>
-        {calendarOpen && <Calendar date={date} today={today} onSelect={onChange} onClose={closeCalendar} />}
+        {calendarOpen && (
+          <Calendar
+            date={date}
+            today={today}
+            onSelect={onChange}
+            onClose={closeCalendar}
+            selfId={selfId}
+            reloadKey={reloadKey}
+          />
+        )}
       </div>
       <span className={`clock${away ? ' away' : ''}`}>
         {away

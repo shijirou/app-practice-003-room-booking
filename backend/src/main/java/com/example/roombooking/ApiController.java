@@ -62,6 +62,12 @@ public class ApiController {
 		return reservations.findByDate(ReservationService.parseDate(date));
 	}
 
+	/** カレンダーの点用。from〜to（両端を含む）のうち、予約がある日と、予約した社員の番号を返す。 */
+	@GetMapping("/reservation-days")
+	List<ReservationService.DayReservations> reservationDays(@RequestParam String from, @RequestParam String to) {
+		return reservations.findDays(ReservationService.parseDate(from), ReservationService.parseDate(to));
+	}
+
 	/** 予約を作る。成功は 201。 */
 	@PostMapping("/reservations")
 	@ResponseStatus(HttpStatus.CREATED)
