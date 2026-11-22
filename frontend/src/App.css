@@ -215,9 +215,10 @@ header.top {
   align-items: center;
   justify-content: center;
   height: 48px;
-  border: 1px solid transparent;
+  border: 3px solid transparent; /* 今日の枠と同じ太さ。色は今日だけ青 */
   border-radius: 6px;
   background: none;
+  background-clip: padding-box; /* 色の面は、この枠の内側だけ（今日の枠の太さの分、小さくなる） */
   padding: 0;
   font-size: 19px;
 }
@@ -234,13 +235,12 @@ header.top {
   opacity: 0.4;
 }
 .day.today {
-  box-shadow: inset 0 0 0 3px var(--blue); /* 今日の枠（太め） */
+  border-color: var(--blue); /* 今日の枠（太め） */
 }
 /* 選んだ日は、現在時刻と同じ薄い黄色。点の色は変えない */
 .day.sel,
 .day.sel:hover {
   background: #fff1cc;
-  border-color: #e6c46a;
   color: #7a4b00;
   font-weight: bold;
   opacity: 1;
@@ -256,8 +256,8 @@ header.top {
   gap: 4px;
 }
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
 }
 .dot.mine {
@@ -268,9 +268,9 @@ header.top {
   width: 0;
   height: 0;
   border-radius: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-bottom: 8px solid var(--sub);
+  border-left: 5.5px solid transparent;
+  border-right: 5.5px solid transparent;
+  border-bottom: 9px solid var(--sub);
 }
 .cal-legend {
   margin-top: 10px;
