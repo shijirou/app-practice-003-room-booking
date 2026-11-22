@@ -106,12 +106,24 @@ export default function Timetable({
     const bad = reservations.some(
       (r) => r.roomId === roomId && minutesOf(r.startAt) < hi && minutesOf(r.endAt) > lo,
     )
-    update(bad ? { ...d, bad, badLo: lo, badHi: hi } : { ...d, lo, hi, bad: false })
+    const next = bad ? { ...d, bad, badLo: lo, badHi: hi } : { ...d, lo, hi, bad: false }
+    if (next.lo === d.lo && next.hi === d.hi && next.bad === d.bad && next.badLo === d.badLo && next.badHi === d.badHi) return
+    update(next)
+  }
+
+  /**
+   * ドラッグ中にカーソルが動いたとき、いま乗っている枠で範囲を決める。
+   * 枠に入った瞬間（mouseenter）だけに頼ると、速く動かしたときに取りこぼすので、動くたびに調べる。
+   */
+  const onMove = (e: React.MouseEvent) => {
+    if (dragRef.current === null) return
+    const td = (e.target as HTMLElement).closest('td[data-from]')
+    if (td instanceof HTMLElement) extend(Number(td.dataset.room), Number(td.dataset.from), Number(td.dataset.to))
   }
 
   return (
     <div className="gridwrap">
-      <div className="gridinner">
+      <div className="gridinner" onMouseMove={onMove}>
         <table className="timetable">
           <thead>
             <tr>
@@ -182,7 +194,8 @@ export default function Timetable({
                     update({ roomId, anchor: start, lo: start, hi: start + UNIT, bad: false, badLo: 0, badHi: 0 })
                   }
             }
-            onMouseEnter={past ? undefined : () => extend(roomId, start, start + UNIT)}
+            data-from={past ? undefined : start}
+            data-to={past ? undefined : start + UNIT}
           />,
         )
       }
@@ -228,10 +241,10 @@ export default function Timetable({
           data-testid="reservation"
           data-id={r.id}
           onClick={(e) => onReservationClick(r, e.currentTarget.getBoundingClientRect())}
-          onMouseEnter={() => {
-            extend(roomId, start, end)
-            onHover(r.id)
-          }}
+          data-room={roomId}
+          data-from={start}
+          data-to={end}
+          onMouseEnter={() => onHover(r.id)}
           onMouseLeave={() => onHover(null)}
         >
           {purpose}（{r.employeeName.replace('架空', '')}）

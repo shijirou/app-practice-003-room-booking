@@ -206,7 +206,7 @@ describe('App', () => {
     })
     render(<App now={now} />)
 
-    const mineTab = await screen.findByRole('tab', { name: '自分（田中架空）の予約（全）2件' })
+    const mineTab = await screen.findByRole('tab', { name: '自分（田中架空）の予約2件' })
     expect(mineTab).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByText('会議室A ／ 朝会')).toBeInTheDocument()
     expect(screen.getByText('進行中')).toBeInTheDocument()
@@ -434,7 +434,7 @@ describe('App', () => {
       await screen.findByText('会議室A（4名）')
 
       fireEvent.mouseDown(freeCell('10:00'))
-      fireEvent.mouseOver(freeCell('11:30'))
+      fireEvent.mouseMove(freeCell('11:30'))
       expect(freeCell('11:00')).toHaveClass('sel')
       expect(freeCell('12:00')).not.toHaveClass('sel')
       fireEvent.mouseUp(document)
@@ -444,7 +444,7 @@ describe('App', () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'やめる' }))
 
       fireEvent.mouseDown(freeCell('15:00'))
-      fireEvent.mouseOver(freeCell('13:00'))
+      fireEvent.mouseMove(freeCell('13:00'))
       fireEvent.mouseUp(document)
       dialog = screen.getByRole('dialog', { name: '予約' })
       expect(within(dialog).getByLabelText('開始')).toHaveValue('780') // 13:00〜15:30
@@ -457,7 +457,7 @@ describe('App', () => {
       const busy = await screen.findByText('営業定例（田中）')
 
       fireEvent.mouseDown(freeCell('9:30'))
-      fireEvent.mouseOver(busy)
+      fireEvent.mouseMove(busy)
       expect(busy).toHaveClass('bad')
       fireEvent.mouseUp(document)
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -471,8 +471,8 @@ describe('App', () => {
       await screen.findByText('会議室A（4名）')
 
       fireEvent.mouseDown(freeCell('10:00'))
-      fireEvent.mouseOver(screen.getAllByRole('cell', { name: '12:00 空き' })[1]) // 会議室 B
-      fireEvent.mouseOver(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
+      fireEvent.mouseMove(screen.getAllByRole('cell', { name: '12:00 空き' })[1]) // 会議室 B
+      fireEvent.mouseMove(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
       fireEvent.mouseUp(document)
       const dialog = screen.getByRole('dialog', { name: '予約' })
       expect(within(dialog).getByLabelText('終了')).toHaveValue('630') // 押しただけと同じ 10:00〜10:30
