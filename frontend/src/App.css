@@ -237,9 +237,9 @@ header.top {
 .day.today {
   border-color: var(--blue); /* 今日の枠（太め） */
 }
-/* 選んだ日は、現在時刻と同じ薄い黄色。点の色は変えない */
-.day.sel,
-.day.sel:hover {
+/* 選んだ日は、現在時刻と同じ薄い黄色。点の色は変えない。今日は青い枠があるので黄色にしない */
+.day.sel:not(.today),
+.day.sel:not(.today):hover {
   background: #fff1cc;
   color: #7a4b00;
   font-weight: bold;
