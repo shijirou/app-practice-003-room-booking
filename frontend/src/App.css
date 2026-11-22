@@ -215,10 +215,11 @@ header.top {
   align-items: center;
   justify-content: center;
   height: 48px;
-  border: 1px solid transparent;
+  border: 3px solid transparent; /* 今日の枠と同じ太さ。色は今日だけ青 */
   border-radius: 6px;
   background: none;
-  padding: 0;
+  background-clip: padding-box; /* 色の面は、この枠の内側だけ（今日の枠の太さの分、小さくなる） */
+  padding: 0 0 6px; /* 数字を少し上げて、下の点と重ならないようにする */
   font-size: 19px;
 }
 .day:hover {
@@ -234,12 +235,14 @@ header.top {
   opacity: 0.4;
 }
 .day.today {
-  border-color: var(--blue);
+  border-color: var(--blue); /* 今日の枠（太め） */
 }
-.day.sel,
-.day.sel:hover {
-  background: var(--blue);
-  color: #fff;
+/* 選んだ日は、現在時刻と同じ薄い黄色。点の色は変えない。今日は青い枠があるので黄色にしない */
+.day.sel:not(.today),
+.day.sel:not(.today):hover {
+  background: #fff1cc;
+  color: #7a4b00;
+  font-weight: bold;
   opacity: 1;
 }
 
@@ -247,27 +250,28 @@ header.top {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 4px;
+  bottom: 3px;
   display: flex;
   justify-content: center;
+  align-items: flex-end;
   gap: 4px;
 }
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
 }
 .dot.mine {
   background: var(--blue);
 }
 .dot.other {
-  background: var(--sub); /* ほかの人の予約は濃いグレー */
-}
-.day.sel .dot.mine {
-  background: #fff;
-}
-.day.sel .dot.other {
-  background: rgba(255, 255, 255, 0.7);
+  /* ほかの人の予約は濃いグレーの ▲（自分の ● と形でも見分けられる） */
+  width: 0;
+  height: 0;
+  border-radius: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid var(--sub);
 }
 .cal-legend {
   margin-top: 10px;
