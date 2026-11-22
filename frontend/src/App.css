@@ -219,7 +219,7 @@ header.top {
   border-radius: 6px;
   background: none;
   background-clip: padding-box; /* 色の面は、この枠の内側だけ（今日の枠の太さの分、小さくなる） */
-  padding: 0;
+  padding: 0 0 6px; /* 数字を少し上げて、下の点と重ならないようにする */
   font-size: 19px;
 }
 .day:hover {
@@ -250,14 +250,15 @@ header.top {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 4px;
+  bottom: 3px;
   display: flex;
   justify-content: center;
+  align-items: flex-end;
   gap: 4px;
 }
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
 }
 .dot.mine {
@@ -268,9 +269,9 @@ header.top {
   width: 0;
   height: 0;
   border-radius: 0;
-  border-left: 5.5px solid transparent;
-  border-right: 5.5px solid transparent;
-  border-bottom: 9px solid var(--sub);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid var(--sub);
 }
 .cal-legend {
   margin-top: 10px;
