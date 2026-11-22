@@ -479,6 +479,20 @@ describe('App', () => {
       expect(within(dialog).getByLabelText('終了')).toHaveValue('930')
     })
 
+    it('ドラッグして開始の枠に戻して離したら、小窓は開かない（30 分の予約は押すだけ）', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      fireEvent.mouseDown(freeCell('10:00'))
+      fireEvent.mouseMove(freeCell('11:00'))
+      expect(freeCell('10:30')).toHaveClass('sel')
+      fireEvent.mouseMove(freeCell('10:00'))
+      fireEvent.mouseUp(document)
+      expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument()
+      expect(freeCell('10:00')).not.toHaveClass('sel') // 選択も消える
+    })
+
     it('ドラッグが予約済みと重なると赤くなり、離すとお知らせが出て小窓は開かない', async () => {
       mockApi({ day: () => json([reservation({ purpose: '営業定例' })]) }) // 10:00〜11:30
       render(<App now={now} />)

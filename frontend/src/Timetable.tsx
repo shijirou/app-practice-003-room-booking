@@ -39,6 +39,8 @@ type Drag = {
   bad: boolean
   badLo: number
   badHi: number
+  /** 押した枠とは別の枠の上に、一度でも動いたか（押すだけのクリックと、動かして戻したドラッグを分ける） */
+  moved: boolean
 }
 
 const HOURS = Array.from({ length: (CLOSE - OPEN) / 60 }, (_, i) => OPEN + i * 60)
@@ -87,6 +89,8 @@ export default function Timetable({
       setDrag(null)
       const { onFreeClick, onFreeDrag, onDragBlocked } = latest.current
       if (d.bad) return onDragBlocked()
+      // 動かして開始の枠に戻した（1 枠だけ）ときは取りやめ。30 分の予約は、押すだけでできる
+      if (d.moved && d.hi - d.lo === UNIT) return
       const cell = document.querySelector(`td[data-room="${d.roomId}"][data-m="${d.lo}"]`)
       if (cell === null) return
       const rect = cell.getBoundingClientRect()
@@ -106,8 +110,18 @@ export default function Timetable({
     const bad = reservations.some(
       (r) => r.roomId === roomId && minutesOf(r.startAt) < hi && minutesOf(r.endAt) > lo,
     )
-    const next = bad ? { ...d, bad, badLo: lo, badHi: hi } : { ...d, lo, hi, bad: false }
-    if (next.lo === d.lo && next.hi === d.hi && next.bad === d.bad && next.badLo === d.badLo && next.badHi === d.badHi) return
+    const moved = d.moved || cm !== d.anchor || ce !== d.anchor + UNIT
+    const next = bad ? { ...d, bad, badLo: lo, badHi: hi, moved } : { ...d, lo, hi, bad: false, moved }
+    if (
+      next.lo === d.lo &&
+      next.hi === d.hi &&
+      next.bad === d.bad &&
+      next.badLo === d.badLo &&
+      next.badHi === d.badHi &&
+      next.moved === d.moved
+    ) {
+      return
+    }
     update(next)
   }
 
@@ -191,7 +205,7 @@ export default function Timetable({
                 : (e) => {
                     if (e.button !== 0) return
                     e.preventDefault()
-                    update({ roomId, anchor: start, lo: start, hi: start + UNIT, bad: false, badLo: 0, badHi: 0 })
+                    update({ roomId, anchor: start, lo: start, hi: start + UNIT, bad: false, badLo: 0, badHi: 0, moved: false })
                   }
             }
             data-from={past ? undefined : start}
