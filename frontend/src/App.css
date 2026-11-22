@@ -3,6 +3,7 @@
   --bg: #aab3c5;
   --text: #1b1f24;
   --sub: #5f6975;
+  --sub-strong: #3f4752; /* 予約カードの 2 段目（会議室 ／ 用件）。--sub より少し濃い */
   --card: #fff;
   --blue: #0b5cad;
   --other: #cfd6e4;
@@ -617,7 +618,7 @@ button.rcard {
 .rcard .rsub {
   flex: 1;
   min-width: 0;
-  color: var(--sub);
+  color: var(--sub-strong);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
