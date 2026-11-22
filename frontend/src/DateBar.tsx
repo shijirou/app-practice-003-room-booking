@@ -29,8 +29,15 @@ export default function DateBar({
 }: Props) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const closeCalendar = useCallback(() => setCalendarOpen(false), []);
-  useDismiss(calendarOpen, box, closeCalendar, true);
+  // 外側を押したときは閉じずに半透明にして、予約表を透かして見られるようにする
+  const [faded, setFaded] = useState(false);
+  const closeCalendar = useCallback(() => {
+    setCalendarOpen(false);
+    setFaded(false);
+  }, []);
+  const fadeCalendar = useCallback(() => setFaded(true), []);
+  const wakeCalendar = useCallback(() => setFaded(false), []);
+  useDismiss(calendarOpen, box, closeCalendar, true, fadeCalendar);
 
   const away = date !== today;
   return (
@@ -55,14 +62,17 @@ export default function DateBar({
           ▶
         </button>
         <div className="dategroup">
-          <div className="datewrap" ref={box}>
+          <div className="datewrap" ref={box} onMouseEnter={wakeCalendar}>
             <button
               type="button"
               className="datepick"
               title="押すとカレンダーを開きます"
               aria-haspopup="dialog"
               aria-expanded={calendarOpen}
-              onClick={() => setCalendarOpen((open) => !open)}
+              onClick={() => {
+                setFaded(false);
+                setCalendarOpen((open) => !open);
+              }}
             >
               <span className="label">{formatDateLabel(date)}</span>
               <span aria-hidden="true">📅</span>
@@ -73,6 +83,7 @@ export default function DateBar({
                 today={today}
                 onSelect={onChange}
                 onClose={closeCalendar}
+                faded={faded}
                 selfId={selfId}
                 reloadKey={reloadKey}
               />

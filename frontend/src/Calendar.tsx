@@ -10,6 +10,8 @@ type Props = {
   /** 日付を押したとき（選んでも閉じない） */
   onSelect: (date: string) => void;
   onClose: () => void;
+  /** 外側を押されて半透明になっているか（カーソルを重ねて戻す処理は、外側の DateBar が持つ） */
+  faded: boolean;
   /** 選んでいる社員。この人の予約の日には青い点、ほかの人の予約の日には灰色の点 */
   selfId: number | null;
   /** 予約を作ったあとなどに増やして、点を読み直す */
@@ -18,12 +20,13 @@ type Props = {
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
-/** ミニカレンダー。日付を選んでも閉じず、×か外側のクリックで閉じる。 */
+/** ミニカレンダー。日付を選んでも閉じず、×・Esc・日付ボタンで閉じる。外側を押すと半透明になる。 */
 export default function Calendar({
   date,
   today,
   onSelect,
   onClose,
+  faded,
   selfId,
   reloadKey,
 }: Props) {
@@ -50,7 +53,11 @@ export default function Calendar({
   };
 
   return (
-    <dialog open className="cal" aria-label="カレンダー">
+    <dialog
+      open
+      className={`cal${faded ? " faded" : ""}`}
+      aria-label="カレンダー"
+    >
       <div className="cal-head">
         <button type="button" aria-label="前の月" onClick={() => moveMonth(-1)}>
           ◀
