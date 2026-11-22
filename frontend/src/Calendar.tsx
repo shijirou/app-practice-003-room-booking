@@ -52,6 +52,9 @@ export default function Calendar({
   return (
     <dialog open className="cal" aria-label="カレンダー">
       <div className="cal-head">
+        <button type="button" aria-label="前の月" onClick={() => moveMonth(-1)}>
+          ◀
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -62,15 +65,12 @@ export default function Calendar({
         >
           今日
         </button>
-        <button type="button" aria-label="前の月" onClick={() => moveMonth(-1)}>
-          ◀
+        <button type="button" aria-label="次の月" onClick={() => moveMonth(1)}>
+          ▶
         </button>
         <div className="cal-title">
           {year}年{month}月
         </div>
-        <button type="button" aria-label="次の月" onClick={() => moveMonth(1)}>
-          ▶
-        </button>
         <span className="spacer" />
         <button
           type="button"
