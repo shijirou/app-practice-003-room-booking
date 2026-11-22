@@ -3,6 +3,7 @@ package com.example.roombooking;
 import java.sql.SQLException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -49,6 +50,20 @@ public class ApiExceptionHandler {
 	ResponseEntity<Map<String, String>> dataIntegrity(DataIntegrityViolationException e) {
 		for (Throwable t = e; t != null; t = t.getCause()) {
 			if (t instanceof SQLException sql && "23P01".equals(sql.getSQLState())) {
+				return body(HttpStatus.CONFLICT, ReservationService.OVERLAP_MESSAGE);
+			}
+		}
+		throw e;
+	}
+
+	/**
+	 * 同じ枠を同時に 2 人が押すと、DB が「お互いを待っている（デッドロック。40P01）」と見て片方を止めることがある。
+	 * 止められた側は、もう片方に枠を取られたのと同じなので、重複と同じ 409 にする。ほかの理由のロック失敗は 500 のまま。
+	 */
+	@ExceptionHandler(CannotAcquireLockException.class)
+	ResponseEntity<Map<String, String>> lockFailure(CannotAcquireLockException e) {
+		for (Throwable t = e; t != null; t = t.getCause()) {
+			if (t instanceof SQLException sql && "40P01".equals(sql.getSQLState())) {
 				return body(HttpStatus.CONFLICT, ReservationService.OVERLAP_MESSAGE);
 			}
 		}

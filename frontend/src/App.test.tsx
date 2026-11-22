@@ -33,6 +33,8 @@ type Options = {
   day?: (date: string) => Response
   /** 社員ごとの「今後の予約」の返事 */
   upcoming?: (employeeId: string) => Response
+  /** カレンダーの点（予約がある日）の返事 */
+  days?: (range: string) => Response
   /** 予約を作る依頼（POST）への返事 */
   create?: (body: Record<string, unknown>) => Response
 }
@@ -44,6 +46,7 @@ let posts: Record<string, unknown>[] = []
 function mockApi({
   day = () => json([]),
   upcoming = () => json([]),
+  days = () => json([]),
   create = () => json(reservation({ id: 200 }), 201),
 }: Options = {}) {
   const calls: string[] = []
@@ -60,6 +63,7 @@ function mockApi({
       if (url === '/api/employees') return Promise.resolve(json(employees))
       if (url === '/api/rooms') return Promise.resolve(json(rooms))
       if (url.startsWith('/api/reservations?date=')) return Promise.resolve(day(url.split('=')[1]))
+      if (url.startsWith('/api/reservation-days?')) return Promise.resolve(days(url))
       if (url.startsWith('/api/reservations?employeeId=')) return Promise.resolve(upcoming(url.split('=')[1]))
       return Promise.resolve(json({ message: '想定外' }, 500))
     }),
@@ -152,6 +156,30 @@ describe('App', () => {
 
     await userEvent.click(within(calendar).getByRole('button', { name: '閉じる' }))
     expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
+  })
+
+  it('カレンダーの日付の下に、自分の予約は青い点、ほかの人の予約は灰色の点を出す', async () => {
+    const calls = mockApi({
+      days: () =>
+        json([
+          { date: '2026-11-20', employeeIds: [1, 2] },
+          { date: '2026-11-21', employeeIds: [2] },
+          { date: '2026-11-22', employeeIds: [1] },
+        ]),
+    })
+    render(<App now={now} />)
+    await screen.findByText('会議室A（4名）')
+
+    await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
+    const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
+    await waitFor(() => expect(within(calendar).getAllByTestId('dot-mine')).toHaveLength(2))
+    expect(calls).toContain('/api/reservation-days?from=2026-11-01&to=2026-12-12')
+    const day = (d: string) => calendar.querySelector(`[data-date="${d}"]`) as HTMLElement
+    expect(within(day('2026-11-20')).getByTestId('dot-mine')).toBeInTheDocument()
+    expect(within(day('2026-11-20')).getByTestId('dot-other')).toBeInTheDocument() // 両方あれば 2 つ
+    expect(within(day('2026-11-21')).queryByTestId('dot-mine')).not.toBeInTheDocument()
+    expect(within(day('2026-11-21')).getByTestId('dot-other')).toBeInTheDocument()
+    expect(within(day('2026-11-23')).queryByTestId('dot-other')).not.toBeInTheDocument()
   })
 
   it('カレンダーの外を押すと閉じるだけで、下の表には押した操作が届かない', async () => {

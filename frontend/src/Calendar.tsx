@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { fetchReservationDays } from './api'
 import { calendarDays, weekdayOf } from './time'
+import { useLoaded } from './useLoaded'
 
 type Props = {
   /** 今見ている日 */
@@ -8,14 +10,22 @@ type Props = {
   /** 日付を押したとき（選んでも閉じない） */
   onSelect: (date: string) => void
   onClose: () => void
+  /** 選んでいる社員。この人の予約の日には青い点、ほかの人の予約の日には灰色の点 */
+  selfId: number | null
+  /** 予約を作ったあとなどに増やして、点を読み直す */
+  reloadKey: number
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 /** ミニカレンダー。日付を選んでも閉じず、×か外側のクリックで閉じる。 */
-export default function Calendar({ date, today, onSelect, onClose }: Props) {
+export default function Calendar({ date, today, onSelect, onClose, selfId, reloadKey }: Props) {
   const [year, setYear] = useState(Number(date.slice(0, 4)))
   const [month, setMonth] = useState(Number(date.slice(5, 7)))
+
+  const cells = calendarDays(year, month)
+  const loaded = useLoaded(fetchReservationDays, `${cells[0]}~${cells[cells.length - 1]}`, reloadKey)
+  const byDate = new Map((loaded.status === 'ok' ? loaded.data : []).map((d) => [d.date, d.employeeIds]))
 
   const moveMonth = (delta: number) => {
     const index = year * 12 + (month - 1) + delta
@@ -56,7 +66,7 @@ export default function Calendar({ date, today, onSelect, onClose }: Props) {
             {w}
           </div>
         ))}
-        {calendarDays(year, month).map((d) => {
+        {cells.map((d) => {
           const dow = weekdayOf(d)
           const cls = [
             'day',
@@ -67,12 +77,27 @@ export default function Calendar({ date, today, onSelect, onClose }: Props) {
           ]
             .filter(Boolean)
             .join(' ')
+          const ids = byDate.get(d) ?? []
+          const mine = ids.includes(selfId ?? -1)
+          const other = ids.some((id) => id !== selfId)
           return (
             <button key={d} type="button" className={cls} data-date={d} onClick={() => onSelect(d)}>
               {Number(d.slice(8))}
+              {(mine || other) && (
+                <span className="dots">
+                  {mine && <span className="dot mine" data-testid="dot-mine" />}
+                  {other && <span className="dot other" data-testid="dot-other" />}
+                </span>
+              )}
             </button>
           )
         })}
+      </div>
+      <div className="cal-legend">
+        <span className="dot mine" />
+        自分の予約
+        <span className="dot other" />
+        ほかの人の予約
       </div>
     </dialog>
   )
