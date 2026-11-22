@@ -223,6 +223,10 @@ header.top {
   padding: 0 0 6px; /* 数字を少し上げて、下の点と重ならないようにする */
   font-size: 19px;
 }
+.day:hover:not(.sel),
+.day.today:hover {
+  background: none; /* ボタン共通のホバー色（薄いグレー）を、日付では使わない */
+}
 .day:not(.today):hover {
   border-color: #e6c46a; /* カーソルを重ねた日は黄色い枠（選んだ日の黄色とそろえる）。今日は青い枠のまま */
 }
