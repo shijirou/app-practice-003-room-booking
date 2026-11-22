@@ -2,9 +2,16 @@ import { useEffect, type RefObject } from 'react'
 
 /**
  * 小窓が開いているとき、外側を押す・Esc キーを押すと閉じる。box は、小窓と開くボタンをまとめて囲む要素。
- * swallow が true なら、外側を押した操作は閉じるだけにして、下の表やボタンには通さない。
+ * swallow が true なら、外側を押した操作は下の表やボタンには通さない。
+ * onOutside を渡すと、外側を押したときは close の代わりにそれを呼ぶ（Esc は close のまま）。
  */
-export function useDismiss(open: boolean, box: RefObject<HTMLElement | null>, close: () => void, swallow = false) {
+export function useDismiss(
+  open: boolean,
+  box: RefObject<HTMLElement | null>,
+  close: () => void,
+  swallow = false,
+  onOutside: () => void = close,
+) {
   useEffect(() => {
     if (!open) return
     const onMouseDown = (e: MouseEvent) => {
@@ -20,7 +27,7 @@ export function useDismiss(open: boolean, box: RefObject<HTMLElement | null>, cl
         document.addEventListener('click', eat, { capture: true, once: true })
         setTimeout(() => document.removeEventListener('click', eat, true), 400)
       }
-      close()
+      onOutside()
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close()
@@ -32,5 +39,5 @@ export function useDismiss(open: boolean, box: RefObject<HTMLElement | null>, cl
       document.removeEventListener('mousedown', onMouseDown, swallow)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [open, box, close, swallow])
+  }, [open, box, close, swallow, onOutside])
 }

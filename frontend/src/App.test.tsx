@@ -197,17 +197,23 @@ describe('App', () => {
     expect(within(day('2026-11-23')).queryByTestId('dot-other')).not.toBeInTheDocument()
   })
 
-  it('カレンダーの外を押すと閉じるだけで、下の表には押した操作が届かない', async () => {
+  it('カレンダーの外を押すと、閉じずに半透明になり、下の表には押した操作が届かない。カーソルを重ねると戻る', async () => {
     mockApi()
     render(<App now={now} />)
     await screen.findByText('会議室A（4名）')
 
     await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
-    expect(screen.getByRole('dialog', { name: 'カレンダー' })).toBeInTheDocument()
+    const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
+    expect(calendar).not.toHaveClass('faded')
     await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0])
-    expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
+    expect(calendar).toHaveClass('faded') // 閉じずに半透明
     expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument() // 表の枠は反応しない
 
+    await userEvent.hover(calendar)
+    expect(calendar).not.toHaveClass('faded') // カーソルを重ねると元の濃さ
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
     await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0]) // 閉じたあとは、ふつうに押せる
     expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
   })
