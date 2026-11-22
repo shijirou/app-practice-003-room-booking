@@ -18,7 +18,7 @@ export default function DateBar({ date, today, nowMinutes, onChange, selfId, rel
   const [calendarOpen, setCalendarOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const closeCalendar = useCallback(() => setCalendarOpen(false), [])
-  useDismiss(calendarOpen, box, closeCalendar)
+  useDismiss(calendarOpen, box, closeCalendar, true)
 
   const away = date !== today
   return (

@@ -236,7 +236,7 @@ const roomName = id => rooms.find(r=>r.id===id).name;
 const find = id => reservations.find(r=>r.id===id);
 const overlaps = (room,date,lo,hi,exceptId) => reservations.some(x=>x.id!==exceptId && x.roomId===room && x.date===date && x.start<hi && x.end>lo);
 // その開始時刻から、最大 1 時間（次の予約・閉館まで）
-const maxEnd = (room,date,start) => Math.min(CLOSE, start+60, ...reservations.filter(x=>x.roomId===room && x.date===date && x.start>=start).map(x=>x.start));
+const maxEnd = (room,date,start) => Math.min(CLOSE, start+UNIT);
 
 function toast(msg) { const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("show"), 2500); }
 

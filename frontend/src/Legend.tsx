@@ -6,7 +6,7 @@ export default function Legend() {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
-  useDismiss(open, box, close)
+  useDismiss(open, box, close, true)
 
   return (
     <div className="legendwrap" ref={box}>

@@ -1,6 +1,6 @@
 /* 見た目は docs/mock/index.html（最終モック）に合わせている */
 :root {
-  --bg: #eef1f5;
+  --bg: #aab3c5;
   --text: #1b1f24;
   --sub: #5f6975;
   --card: #fff;
@@ -81,6 +81,8 @@ header.top {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--soft);
 }
 .loginbar {
   display: flex;
@@ -406,11 +408,6 @@ header.top {
 .timetable tr.alt td.free.sel {
   background: #b9d5f5; /* ドラッグで選んでいる範囲 */
 }
-.timetable td.bad,
-.timetable td.bad:hover {
-  background: #e5484d; /* ドラッグが予約済みと重なった部分 */
-  color: #fff;
-}
 .timetable td.draft {
   background: #dbe9fb;
   border: 2px dashed var(--blue);
@@ -447,6 +444,14 @@ header.top {
 }
 .timetable td.mine:hover {
   background: #094b8f;
+}
+/* ドラッグが予約済みと重なった部分（予約枠の色より強くするため、busy・mine と一緒に書く） */
+.timetable td.busy.bad,
+.timetable td.busy.bad:hover,
+.timetable td.mine.bad,
+.timetable td.mine.bad:hover {
+  background: #e5484d;
+  color: #fff;
 }
 .timetable td.hl {
   outline: 4px solid #ffb300;
@@ -515,18 +520,20 @@ header.top {
 .lists {
   margin-top: 14px;
 }
+/* ファイルの見出し（インデックス）風のタブ。選んでいるタブは下の枠とつながる */
 .tabs {
   display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 4px;
+  margin-bottom: 0;
   border-bottom: 1px solid var(--line);
 }
 .tab {
-  border: none;
-  border-bottom: 3px solid transparent;
-  border-radius: 0;
-  background: none;
-  padding: 6px 14px;
+  position: relative;
+  bottom: -1px; /* 下の線に重ねて、選んだタブだけ線を消す */
+  border: 1px solid var(--line);
+  border-radius: 8px 8px 0 0;
+  background: #e6e9ee;
+  padding: 8px 16px;
   font-size: 15px;
   color: var(--sub);
 }
@@ -534,9 +541,17 @@ header.top {
   background: #f3f5f7;
 }
 .tab.on {
+  background: #fff;
   color: var(--blue);
   font-weight: bold;
-  border-bottom-color: var(--blue);
+  border-bottom-color: #fff;
+  box-shadow: inset 0 3px 0 var(--blue);
+}
+.tabs + .list {
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  padding: 10px;
 }
 .list {
   max-height: 340px;
