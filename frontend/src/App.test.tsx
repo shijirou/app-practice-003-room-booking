@@ -577,6 +577,46 @@ describe('App', () => {
     })
   })
 
+  describe('予約の内容の開け閉め', () => {
+    it('同じ「みんな」のカードをもう一度押すと、予約の内容が閉じる', async () => {
+      mockApi({ day: () => json([reservation({ employeeId: 2, employeeName: '佐藤架空', purpose: '商談' })]) })
+      render(<App now={now} />)
+      await userEvent.click(await screen.findByRole('tab', { name: /の予約（みんな）/ }))
+      const card = screen.getByText('会議室A ／ 商談（佐藤架空）')
+
+      await userEvent.click(card)
+      expect(screen.getByRole('dialog', { name: '予約の内容' })).toBeInTheDocument()
+      await userEvent.click(card)
+      expect(screen.queryByRole('dialog', { name: '予約の内容' })).not.toBeInTheDocument()
+      await userEvent.click(card) // もう一度押せば、また開く
+      expect(screen.getByRole('dialog', { name: '予約の内容' })).toBeInTheDocument()
+    })
+
+    it('表の予約枠も、同じ枠をもう一度押すと閉じる', async () => {
+      mockApi({ day: () => json([reservation({ employeeId: 2, employeeName: '佐藤架空', purpose: '商談' })]) })
+      render(<App now={now} />)
+      const cell = await screen.findByText('商談（佐藤）')
+
+      await userEvent.click(cell)
+      expect(screen.getByRole('dialog', { name: '予約の内容' })).toBeInTheDocument()
+      await userEvent.click(cell)
+      expect(screen.queryByRole('dialog', { name: '予約の内容' })).not.toBeInTheDocument()
+    })
+
+    it('カレンダーを開いたまま、予約の内容の「×」を押しても、カレンダーは閉じない', async () => {
+      mockApi({ day: () => json([reservation({ employeeId: 2, employeeName: '佐藤架空', purpose: '商談' })]) })
+      render(<App now={now} />)
+      await userEvent.click(await screen.findByTitle('押すとカレンダーを開きます'))
+      await userEvent.click(await screen.findByRole('tab', { name: /の予約（みんな）/ }))
+      await userEvent.click(screen.getByText('会議室A ／ 商談（佐藤架空）'))
+      const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
+
+      await userEvent.click(within(screen.getByRole('dialog', { name: '予約の内容' })).getByRole('button', { name: '閉じる' }))
+      expect(screen.queryByRole('dialog', { name: '予約の内容' })).not.toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: 'カレンダー' })).toBe(calendar) // カレンダーは残る
+    })
+  })
+
   describe('予約の内容', () => {
     it('ほかの人の予約を押すと内容と「変更できません」が出る。Esc で閉じる', async () => {
       mockApi({ day: () => json([reservation({ employeeId: 2, employeeName: '佐藤架空', purpose: '商談' })]) })
