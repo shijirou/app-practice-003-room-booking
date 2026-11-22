@@ -20,7 +20,7 @@ type Props = {
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
-/** ミニカレンダー。日付を選んでも閉じず、×・Esc・日付ボタンで閉じる。外側を押すと半透明になる。 */
+/** ミニカレンダー。日付を選んでも閉じず、×・Esc・日付ボタン・外側のクリックで閉じる。カーソルが外に出ると半透明になる。 */
 export default function Calendar({
   date,
   today,
@@ -32,6 +32,13 @@ export default function Calendar({
 }: Props) {
   const [year, setYear] = useState(Number(date.slice(0, 4)));
   const [month, setMonth] = useState(Number(date.slice(5, 7)));
+  // 選んでいる日が変わったら（下の欄を押したときなど）、表示する月もその月に合わせる
+  const [shownDate, setShownDate] = useState(date);
+  if (date !== shownDate) {
+    setShownDate(date);
+    setYear(Number(date.slice(0, 4)));
+    setMonth(Number(date.slice(5, 7)));
+  }
 
   const cells = calendarDays(year, month);
   const loaded = useLoaded(
@@ -98,11 +105,18 @@ export default function Calendar({
             {w}
           </div>
         ))}
-        {cells.map((d) => {
+        {cells.map((d, index) => {
+          // 翌月の日だけの行は、縮めて表示する
+          const week = cells.slice(
+            Math.floor(index / 7) * 7,
+            Math.floor(index / 7) * 7 + 7,
+          );
+          const compact = week.every((w) => Number(w.slice(5, 7)) !== month);
           const dow = weekdayOf(d);
           const cls = [
             "day",
             Number(d.slice(5, 7)) !== month ? "out" : "",
+            compact ? "compact" : "",
             d === today ? "today" : "",
             d === date ? "sel" : "",
             dow === 0 ? "sun" : dow === 6 ? "sat" : "",

@@ -197,7 +197,7 @@ describe('App', () => {
     expect(within(day('2026-11-23')).queryByTestId('dot-other')).not.toBeInTheDocument()
   })
 
-  it('カレンダーの外を押すと、閉じずに半透明になり、下の表には押した操作が届かない。カーソルを重ねると戻る', async () => {
+  it('カレンダーからカーソルが外れると半透明になり、重ねると戻る。外を押すと閉じ、下の表には押した操作が届かない', async () => {
     mockApi()
     render(<App now={now} />)
     await screen.findByText('会議室A（4名）')
@@ -205,17 +205,34 @@ describe('App', () => {
     await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
     const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
     expect(calendar).not.toHaveClass('faded')
-    await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0])
-    expect(calendar).toHaveClass('faded') // 閉じずに半透明
+    const wrap = calendar.parentElement as HTMLElement // 日付ボタンとカレンダーを囲む枠
+    fireEvent.mouseLeave(wrap) // カーソルが外へ
+    expect(calendar).toHaveClass('faded')
+    fireEvent.mouseEnter(wrap)
+    expect(calendar).not.toHaveClass('faded') // 重ねると元の濃さ
+
+    await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0]) // 外を押す
+    expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument() // 閉じる
     expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument() // 表の枠は反応しない
 
-    await userEvent.hover(calendar)
-    expect(calendar).not.toHaveClass('faded') // カーソルを重ねると元の濃さ
-
-    await userEvent.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
     await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0]) // 閉じたあとは、ふつうに押せる
     expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
+  })
+
+  it('カレンダーを開いたまま、下の欄の予約を押すと、その日に移り、カレンダーは閉じない', async () => {
+    mockApi({
+      upcoming: () =>
+        json([reservation({ id: 300, startAt: '2026-12-25T10:00:00+09:00', endAt: '2026-12-25T11:00:00+09:00', purpose: '年末会議' })]),
+    })
+    render(<App now={now} />)
+    await screen.findByText('会議室A（4名）')
+
+    await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
+    const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
+    await userEvent.click(await screen.findByText('会議室A ／ 年末会議'))
+    expect(await screen.findByText('2026年12月25日（金）')).toBeInTheDocument() // 日付が移った
+    expect(screen.getByRole('dialog', { name: 'カレンダー' })).toBe(calendar) // 閉じない
+    expect(within(calendar).getByText('2026年12月')).toBeInTheDocument() // 表示月も合わせる
   })
 
   it('「？」で色の説明が開き、Esc で閉じる', async () => {
