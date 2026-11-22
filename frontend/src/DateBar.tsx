@@ -36,8 +36,8 @@ export default function DateBar({
     setFaded(false);
   }, []);
   const wakeCalendar = useCallback(() => setFaded(false), []);
-  // 外側を押したら閉じる。ただし下の欄（予約の一覧）を押したときは、閉じずに操作を通す
-  useDismiss(calendarOpen, box, closeCalendar, true, ".lists");
+  // 外側を押したら閉じる。ただし下の欄（予約の一覧）と小窓の中を押したときは、閉じずに操作を通す
+  useDismiss(calendarOpen, box, closeCalendar, true, ".lists, .pop");
 
   const away = date !== today;
   return (

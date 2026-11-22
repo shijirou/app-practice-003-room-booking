@@ -113,12 +113,24 @@ export default function App({ now = () => new Date() }: Props) {
     setPopup({ kind: 'new', form: { roomId, date, start, end, purpose: '' }, pos: placePopup(rect, RESERVE_HEIGHT) })
   }
 
+  /** その予約の内容の小窓が、いま開いているか */
+  const isViewing = (reservation: Reservation) => popup?.kind === 'view' && popup.reservation.id === reservation.id
+
+  /** 予約の枠を押した。同じ予約の内容がすでに開いていれば、閉じる */
   const openView = (reservation: Reservation, rect: DOMRect) => {
+    if (isViewing(reservation)) {
+      setPopup(null)
+      return
+    }
     setPopup({ kind: 'view', reservation, pos: placePopup(rect, DETAIL_HEIGHT) })
   }
 
-  /** 「みんな」のカードを押した。表の同じ予約の枠の近くに、予約の内容を出す */
+  /** 「みんな」のカードを押した。表の同じ予約の枠の近くに、予約の内容を出す（開いているときは閉じる） */
   const openFromCard = (reservation: Reservation, card: HTMLElement) => {
+    if (isViewing(reservation)) {
+      setPopup(null)
+      return
+    }
     window.scrollTo(0, 0)
     const cell = document.querySelector(`td[data-id="${reservation.id}"]`)
     flash(reservation.id)

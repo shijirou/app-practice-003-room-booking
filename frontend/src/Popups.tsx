@@ -142,7 +142,8 @@ type DetailProps = {
 /** 予約の内容の小窓（見るだけ。変更・キャンセルは、あとの縦切りで足す）。 */
 export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onClose }: DetailProps) {
   const box = useRef<HTMLDialogElement>(null)
-  useDismiss(true, box, onClose)
+  // 予約の枠・カードを押したときは、その押した操作（開く・同じ予約なら閉じる）に任せる
+  useDismiss(true, box, onClose, false, '.rcard, td[data-id]')
 
   const date = dateOf(r.startAt)
   const start = minutesOf(r.startAt)
