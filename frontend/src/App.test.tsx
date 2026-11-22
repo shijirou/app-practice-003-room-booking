@@ -158,6 +158,21 @@ describe('App', () => {
     expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument()
   })
 
+  it('カレンダーの「今月」は、表示を今月に戻すだけで、選んでいる日付は変えない', async () => {
+    mockApi()
+    render(<App now={now} />)
+    await screen.findByText('会議室A（4名）')
+
+    await userEvent.click(screen.getByTitle('押すとカレンダーを開きます'))
+    const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
+    await userEvent.click(within(calendar).getByRole('button', { name: '次の月' }))
+    expect(within(calendar).getByText('2026年12月')).toBeInTheDocument()
+
+    await userEvent.click(within(calendar).getByRole('button', { name: '今月' }))
+    expect(within(calendar).getByText('2026年11月')).toBeInTheDocument()
+    expect(screen.getByText('2026年11月20日（金）')).toBeInTheDocument() // 日付は今日のまま
+  })
+
   it('カレンダーの日付の下に、自分の予約は青い点、ほかの人の予約は灰色の点を出す', async () => {
     const calls = mockApi({
       days: () =>

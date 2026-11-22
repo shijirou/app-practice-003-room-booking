@@ -57,13 +57,13 @@ export default function Calendar({
         </button>
         <button
           type="button"
+          title="カレンダーを今月に戻します（選んでいる日付は変わりません）"
           onClick={() => {
-            onSelect(today);
             setYear(Number(today.slice(0, 4)));
             setMonth(Number(today.slice(5, 7)));
           }}
         >
-          今日
+          今月
         </button>
         <button type="button" aria-label="次の月" onClick={() => moveMonth(1)}>
           ▶
