@@ -493,6 +493,24 @@ describe('App', () => {
       expect(freeCell('10:00')).not.toHaveClass('sel') // 選択も消える
     })
 
+    it('ドラッグ中に上下の別の会議室へずれても、横の位置で開始の会議室の選択を続ける', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      // 画面のない試験環境では枠の位置が取れないので、会議室 A の 12:00 の枠が x=100〜150 にあることにする
+      vi.spyOn(freeCell('12:00'), 'getBoundingClientRect').mockReturnValue({ left: 100, right: 150 } as DOMRect)
+      fireEvent.mouseDown(freeCell('10:00'))
+      fireEvent.mouseMove(screen.getAllByRole('cell', { name: '12:00 空き' })[1], { clientX: 120 }) // 会議室 B の上
+      expect(freeCell('11:00')).toHaveClass('sel')
+      expect(freeCell('12:00')).toHaveClass('sel')
+      expect(freeCell('12:30')).not.toHaveClass('sel')
+      fireEvent.mouseUp(document)
+      const dialog = screen.getByRole('dialog', { name: '予約' })
+      expect(within(dialog).getByLabelText('会議室')).toHaveValue('10') // 開始した会議室 A のまま
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('750') // 10:00〜12:30
+    })
+
     it('ドラッグが予約済みと重なると赤くなり、離すとお知らせが出て小窓は開かない', async () => {
       mockApi({ day: () => json([reservation({ purpose: '営業定例' })]) }) // 10:00〜11:30
       render(<App now={now} />)

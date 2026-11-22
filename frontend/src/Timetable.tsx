@@ -130,9 +130,23 @@ export default function Timetable({
    * 枠に入った瞬間（mouseenter）だけに頼ると、速く動かしたときに取りこぼすので、動くたびに調べる。
    */
   const onMove = (e: React.MouseEvent) => {
-    if (dragRef.current === null) return
-    const td = (e.target as HTMLElement).closest('td[data-from]')
-    if (td instanceof HTMLElement) extend(Number(td.dataset.room), Number(td.dataset.from), Number(td.dataset.to))
+    const d = dragRef.current
+    if (d === null) return
+    const td = (e.target as HTMLElement).closest('td')
+    if (td === null) return
+    if (td.dataset.from !== undefined && Number(td.dataset.room) === d.roomId) {
+      extend(d.roomId, Number(td.dataset.from), Number(td.dataset.to))
+      return
+    }
+    // 上下の別の会議室の行にずれたときは、横の位置だけを見て、開始の会議室の同じ位置の枠で範囲を決める
+    const x = e.clientX
+    for (const cell of document.querySelectorAll<HTMLElement>(`td[data-room="${d.roomId}"][data-from]`)) {
+      const rect = cell.getBoundingClientRect()
+      if (x >= rect.left && x < rect.right) {
+        extend(d.roomId, Number(cell.dataset.from), Number(cell.dataset.to))
+        return
+      }
+    }
   }
 
   return (
