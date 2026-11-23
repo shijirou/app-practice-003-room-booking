@@ -2,6 +2,7 @@ package com.example.roombooking;
 
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -81,5 +82,12 @@ public class ApiController {
 	@PutMapping("/reservations/{id}")
 	ReservationResponse updateReservation(@PathVariable Long id, @RequestBody CreateReservationRequest request) {
 		return reservations.update(id, request);
+	}
+
+	/** 予約をキャンセルする（本当に消す）。成功は 204。employeeId は、予約した本人かの確認に使う。 */
+	@DeleteMapping("/reservations/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void cancelReservation(@PathVariable Long id, @RequestParam(required = false) Long employeeId) {
+		reservations.cancel(id, employeeId);
 	}
 }
