@@ -18,7 +18,7 @@ import { DetailPopup, ReservePopup } from './Popups'
 import Timetable from './Timetable'
 import { CLOSE, dateOf, earliestStart, formatMinutes, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
 import { errorMessage, useLoaded } from './useLoaded'
-import { defaultEnd, firstFreeSlot, type Form } from './validate'
+import { defaultEnd, firstFreeSlot, validateForm, type Form } from './validate'
 
 type Props = {
   /** 今の日時を返す関数。テストで時刻を固定するために差し替えられる */
@@ -64,6 +64,8 @@ export default function App({ now = () => new Date() }: Props) {
   const [flashId, setFlashId] = useState<number | null>(null)
   const [popup, setPopup] = useState<Popup | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  // 時間のリストでカーソルを合わせている（決定前の）時刻。表の点線の青枠に、仮に反映する
+  const [preview, setPreview] = useState<{ field: 'start' | 'end'; value: number } | null>(null)
   // 「もう一度読み込む」ボタンで増やして、読み込みをやり直す
   const [retry, setRetry] = useState(0)
   // 予約を作ったあとに、予約の一覧だけを読み直すために増やす
@@ -269,10 +271,20 @@ export default function App({ now = () => new Date() }: Props) {
   const dayReservations =
     reservations.status === 'ok' ? reservations.data.filter((r) => r.id !== editId) : null
 
-  const draft =
-    popup?.kind === 'form' && popup.form.date === date
-      ? { roomId: popup.form.roomId, start: popup.form.start, end: popup.form.end }
-      : null
+  // 入力中の予約。時間のリストにカーソルを合わせている間は、その時刻を仮に反映する（開始が終了以後になるときは、小窓と同じく 1 時間後）
+  const draft = (() => {
+    if (popup?.kind !== 'form' || popup.form.date !== date) return null
+    let { start, end } = popup.form
+    if (preview?.field === 'start') {
+      start = preview.value
+      if (end <= start) end = Math.min(start + 60, CLOSE)
+    } else if (preview?.field === 'end') {
+      end = preview.value
+    }
+    // 予約できない時間（4 時間を超える・過去・重なりなど）は、青ではなく赤の枠で見せる
+    const invalid = validateForm({ ...popup.form, start, end }, { today, nowMinutes, existing: dayReservations }) !== null
+    return { roomId: popup.form.roomId, start, end, invalid }
+  })()
 
   return (
     <div className="wrap">
@@ -391,6 +403,7 @@ export default function App({ now = () => new Date() }: Props) {
           onClose={() => setPopup(null)}
           onSubmit={create}
           focusFirst={popup.focusFirst}
+          onPreview={(field, value) => setPreview(value === null ? null : { field, value })}
         />
       )}
       {base.status === 'ok' && popup?.kind === 'view' && (

@@ -498,6 +498,12 @@ header.top {
   text-overflow: ellipsis;
   padding: 0 6px;
 }
+/* 予約できない時間（4 時間を超える・過去・重なりなど）の仮表示は、青ではなく赤 */
+.timetable td.draft.invalid {
+  background: #fbe3e1;
+  border-color: var(--red);
+  color: var(--red);
+}
 .timetable td.past {
   background: var(--hatch);
 }
@@ -798,7 +804,73 @@ button.rcard {
   align-items: center;
 }
 .times select {
+  width: 100%;
+}
+.timesel {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+/* 時間の自作リスト（カーソルを合わせると、表の青枠が連動して伸び縮みする） */
+.timelist {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: min(340px, 50vh); /* 10 行ほど見える高さ */
+  overflow-y: auto;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+.timelist button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 4px 10px 4px 26px; /* 左は、いまの時刻の印（✓）の場所 */
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* いま決まっている時刻: ✓ の印・薄い青の背景・太字 */
+.timelist button.cur {
+  font-weight: bold;
+  background: #dbe9fb;
+}
+.timelist button.cur::before {
+  content: '✓';
+  position: absolute;
+  left: 9px;
+  color: var(--blue);
+}
+.timelist button.hl {
+  background: var(--blue);
+  color: #fff;
+}
+.timelist button.hl::before {
+  color: #fff;
+}
+/* 選ぶと予約できなくなる時刻（4 時間を超える・過去など）は赤 */
+.timelist button.bad {
+  color: var(--red);
+}
+.timelist button.bad.cur::before {
+  color: var(--red);
+}
+.timelist button.bad.hl {
+  background: var(--red);
+  color: #fff;
+}
+.timelist button.bad.hl::before {
+  color: #fff;
 }
 button.danger {
   color: var(--red);

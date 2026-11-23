@@ -701,6 +701,147 @@ describe('App', () => {
     })
   })
 
+  describe('時間のリストと表の青枠の連動', () => {
+    // 今日 9:00。空き枠 10:00 を押して、10:00〜10:30 の小窓を開いた状態から始める
+    const open = async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+      await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0])
+      return screen.getByRole('dialog', { name: '予約' })
+    }
+    const item = (name: string) => screen.getByRole('button', { name, hidden: true })
+
+    it('終了の欄を押すと自作のリストが開き、時刻にカーソルを合わせると青枠が伸び、外へ出ると元に戻る', async () => {
+      const dialog = await open()
+      expect(screen.getByText('10:00〜10:30 予約中…')).toBeInTheDocument()
+
+      await userEvent.click(within(dialog).getByLabelText('終了'))
+      await userEvent.hover(item('12:00'))
+      expect(screen.getByText('10:00〜12:00 予約中…')).toHaveClass('draft') // 決定前の仮表示
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('630') // 値はまだ変わらない
+
+      await userEvent.hover(item('11:00'))
+      expect(screen.getByText('10:00〜11:00 予約中…')).toBeInTheDocument()
+
+      await userEvent.unhover(item('11:00')) // リストの外へ出る
+      expect(screen.getByText('10:00〜10:30 予約中…')).toBeInTheDocument()
+    })
+
+    it('時刻を押すと決定して、リストが閉じる（青枠はそのまま）', async () => {
+      const dialog = await open()
+      await userEvent.click(within(dialog).getByLabelText('終了'))
+      await userEvent.hover(item('12:00'))
+      await userEvent.click(item('12:00'))
+
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('720')
+      expect(screen.getByText('10:00〜12:00 予約中…')).toBeInTheDocument()
+      expect(document.querySelector('.timelist')).toBeNull()
+    })
+
+    it('開始の欄では、開始が終了以後になる時刻にカーソルを合わせると、枠は 1 時間分になる', async () => {
+      const dialog = await open()
+      await userEvent.click(within(dialog).getByLabelText('開始'))
+      await userEvent.hover(item('13:00'))
+      expect(screen.getByText('13:00〜14:00 予約中…')).toBeInTheDocument()
+      await userEvent.hover(item('9:30'))
+      expect(screen.getByText('9:30〜10:30 予約中…')).toBeInTheDocument() // 終了は、元のまま
+    })
+
+    it('Esc・欄の外を押すと、決定せずに閉じて元に戻る（小窓は閉じない）', async () => {
+      const dialog = await open()
+      const end = within(dialog).getByLabelText('終了')
+
+      await userEvent.click(end)
+      await userEvent.hover(item('12:00'))
+      await userEvent.keyboard('{Escape}')
+      expect(document.querySelector('.timelist')).toBeNull()
+      expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
+      expect(end).toHaveValue('630')
+      expect(screen.getByText('10:00〜10:30 予約中…')).toBeInTheDocument()
+
+      await userEvent.click(end)
+      await userEvent.hover(item('12:00'))
+      await userEvent.click(within(dialog).getByLabelText('用件')) // 小窓の中の別の場所
+      expect(document.querySelector('.timelist')).toBeNull()
+      expect(end).toHaveValue('630')
+      expect(screen.getByText('10:00〜10:30 予約中…')).toBeInTheDocument()
+    })
+
+    it('キーボード: Space で開き、↓ で時刻を選ぶたびに青枠が動き、Enter で決定。Esc なら取り消し', async () => {
+      const dialog = await open()
+      const end = within(dialog).getByLabelText('終了')
+      end.focus()
+
+      await userEvent.keyboard(' ')
+      expect(document.querySelector('.timelist')).not.toBeNull()
+      await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+      expect(screen.getByText('10:00〜11:30 予約中…')).toBeInTheDocument()
+      await userEvent.keyboard('{Enter}')
+      expect(end).toHaveValue('690')
+      expect(document.querySelector('.timelist')).toBeNull()
+
+      await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
+      await userEvent.keyboard('{ArrowDown}')
+      expect(screen.getByText('10:00〜12:00 予約中…')).toBeInTheDocument()
+      await userEvent.keyboard('{Escape}')
+      expect(end).toHaveValue('690')
+      expect(screen.getByText('10:00〜11:30 予約中…')).toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
+    })
+
+    it('4 時間を超える時刻は、リストで赤く、青枠も赤になる（ちょうど 4 時間までは青）', async () => {
+      const dialog = await open() // 10:00〜10:30
+      await userEvent.click(within(dialog).getByLabelText('終了'))
+      expect(item('14:00')).not.toHaveClass('bad')
+      expect(item('14:30')).toHaveClass('bad')
+
+      await userEvent.hover(item('14:00'))
+      expect(screen.getByText('10:00〜14:00 予約中…')).not.toHaveClass('invalid')
+      await userEvent.hover(item('14:30'))
+      expect(screen.getByText('10:00〜14:30 予約中…')).toHaveClass('invalid')
+      expect(item('14:30')).toHaveClass('hl')
+
+      await userEvent.click(item('14:30')) // 決定しても赤のまま（そのままでは送れない）
+      expect(screen.getByText('10:00〜14:30 予約中…')).toHaveClass('invalid')
+      await userEvent.click(within(dialog).getByLabelText('終了'))
+      await userEvent.hover(item('12:00'))
+      expect(screen.getByText('10:00〜12:00 予約中…')).not.toHaveClass('invalid')
+    })
+
+    it('開始のリストでは、今より前（過去）の時刻が赤い（今日 9:00）', async () => {
+      const dialog = await open()
+      await userEvent.click(within(dialog).getByLabelText('開始'))
+      expect(item('8:30')).toHaveClass('bad')
+      expect(item('9:00')).not.toHaveClass('bad')
+      await userEvent.hover(item('8:00'))
+      expect(screen.getByText('8:00〜10:30 予約中…')).toHaveClass('invalid')
+    })
+
+    it('リストのスクロールバー（項目ではない部分）を押しても、リストは閉じない', async () => {
+      const dialog = await open()
+      await userEvent.click(within(dialog).getByLabelText('終了'))
+      const list = document.querySelector('.timelist') as HTMLElement
+
+      await userEvent.pointer({ keys: '[MouseLeft>]', target: list }) // ボタンを押したまま（つまんで動かす途中）
+      expect(document.querySelector('.timelist')).not.toBeNull()
+      expect(within(dialog).getByLabelText('終了')).toHaveFocus()
+      await userEvent.pointer({ keys: '[/MouseLeft]', target: list })
+      expect(document.querySelector('.timelist')).not.toBeNull()
+    })
+
+    it('リストを開いたまま小窓を閉じても、次に開いた小窓に仮表示が残らない', async () => {
+      const dialog = await open()
+      await userEvent.click(within(dialog).getByLabelText('終了'))
+      await userEvent.hover(item('12:00'))
+      await userEvent.click(within(dialog).getByRole('button', { name: '閉じる' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+      await userEvent.click(screen.getAllByRole('cell', { name: '13:00 空き' })[0])
+      expect(screen.getByText('13:00〜13:30 予約中…')).toBeInTheDocument()
+    })
+  })
+
   describe('予約表の矢印キー操作', () => {
     // 今日 9:00。会議室 A に 10:00〜11:30 の自分の予約がある
     const setup = async () => {
