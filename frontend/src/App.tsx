@@ -18,7 +18,7 @@ import { DetailPopup, ReservePopup } from './Popups'
 import Timetable from './Timetable'
 import { CLOSE, dateOf, earliestStart, formatMinutes, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
 import { errorMessage, useLoaded } from './useLoaded'
-import { defaultEnd, type Form } from './validate'
+import { defaultEnd, firstFreeSlot, type Form } from './validate'
 
 type Props = {
   /** 今の日時を返す関数。テストで時刻を固定するために差し替えられる */
@@ -26,7 +26,7 @@ type Props = {
 }
 
 /** 開いている小窓。form は予約する・変更する小窓（editId があれば変更）、view は予約の内容 */
-type Popup = { kind: 'form'; form: Form; pos: Pos; editId?: number } | { kind: 'view'; reservation: Reservation; pos: Pos }
+type Popup = { kind: 'form'; form: Form; pos: Pos; editId?: number; focusFirst?: boolean } | { kind: 'view'; reservation: Reservation; pos: Pos }
 
 /** 社員と会議室を、まとめて読み込む */
 async function fetchBase() {
@@ -109,6 +109,15 @@ export default function App({ now = () => new Date() }: Props) {
   const openNew = (roomId: number, start: number, rect: DOMRect) => {
     const form: Form = { roomId, date, start, end: defaultEnd(start), purpose: '' }
     setPopup({ kind: 'form', form, pos: placePopup(rect, RESERVE_HEIGHT) })
+  }
+
+  /** ［＋ 予約する］ボタンを押した（キーボードだけで予約を始める入口）。見ている日の、最初の空き 30 分で小窓を開く */
+  const openFromButton = (rect: DOMRect) => {
+    if (base.status !== 'ok') return
+    const slot = firstFreeSlot(base.data.rooms, reservations.status === 'ok' ? reservations.data : [], earliestStart(date, today, nowMinutes))
+    if (slot === null) return
+    const form: Form = { roomId: slot.roomId, date, start: slot.start, end: defaultEnd(slot.start), purpose: '' }
+    setPopup({ kind: 'form', form, pos: placePopup(rect, RESERVE_HEIGHT), focusFirst: true })
   }
 
   /** ドラッグで範囲を選んだ。その範囲で小窓を開く */
@@ -277,7 +286,18 @@ export default function App({ now = () => new Date() }: Props) {
         />
         <div className="infobar">
           <p className="hint">{hint}</p>
-          <Legend />
+          <div className="infoactions">
+            <button
+              type="button"
+              className="primary"
+              disabled={base.status !== 'ok' || firstStart >= CLOSE}
+              title={firstStart >= CLOSE ? (date < today ? '過去の日は予約できません' : '本日の受付は終了しました') : '空いている 30 分で予約の小窓を開きます'}
+              onClick={(e) => openFromButton(e.currentTarget.getBoundingClientRect())}
+            >
+              ＋ 予約する
+            </button>
+            <Legend />
+          </div>
         </div>
 
         {failure !== null ? (
@@ -344,6 +364,7 @@ export default function App({ now = () => new Date() }: Props) {
           onChange={changeForm}
           onClose={() => setPopup(null)}
           onSubmit={create}
+          focusFirst={popup.focusFirst}
         />
       )}
       {base.status === 'ok' && popup?.kind === 'view' && (

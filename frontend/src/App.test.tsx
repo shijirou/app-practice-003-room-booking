@@ -700,6 +700,76 @@ describe('App', () => {
     })
   })
 
+  describe('［＋ 予約する］ボタン（キーボードだけで予約を始める）', () => {
+    it('キーボードの Enter で押すと、最初の空き 30 分の小窓が開き、会議室の欄にキーボードの位置が移る', async () => {
+      mockApi({
+        day: () => json([reservation({ startAt: '2026-11-20T09:00:00+09:00', endAt: '2026-11-20T10:30:00+09:00' })]),
+      })
+      render(<App now={now} />)
+      const button = await screen.findByRole('button', { name: '＋ 予約する' })
+      await waitFor(() => expect(button).toBeEnabled())
+
+      button.focus()
+      await userEvent.keyboard('{Enter}')
+
+      const dialog = screen.getByRole('dialog', { name: '予約' })
+      // 今は 9:00。会議室 A の 9:00〜10:30 は埋まっているので、最初の空きは 10:30
+      expect(within(dialog).getByLabelText('会議室')).toHaveValue('10')
+      expect(within(dialog).getByLabelText('開始')).toHaveValue('630')
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('660')
+      expect(within(dialog).getByLabelText('会議室')).toHaveFocus()
+      expect(screen.getByText('10:30〜11:00 予約中…')).toHaveClass('draft')
+    })
+
+    it('キーボードだけで、選んで予約まで進める', async () => {
+      mockApi()
+      render(<App now={now} />)
+      const button = await screen.findByRole('button', { name: '＋ 予約する' })
+      await waitFor(() => expect(button).toBeEnabled())
+
+      button.focus()
+      await userEvent.keyboard('{Enter}')
+      await userEvent.keyboard('{Tab}{Tab}{Tab}{Tab}') // 会議室 → 日付 → 開始 → 終了 → 用件
+      expect(screen.getByLabelText('用件')).toHaveFocus()
+      await userEvent.keyboard('打合せ{Enter}')
+
+      expect(await screen.findByRole('status')).toHaveTextContent('予約しました')
+      expect(posts).toEqual([
+        {
+          employeeId: 1,
+          roomId: 10,
+          startAt: '2026-11-20T09:00:00+09:00',
+          endAt: '2026-11-20T09:30:00+09:00',
+          purpose: '打合せ',
+        },
+      ])
+    })
+
+    it('今日の受付が終わっているときと、過去の日では、押せない（理由が title に出る）', async () => {
+      mockApi()
+      render(<App now={() => new Date('2026-11-20T11:30:00Z')} />) // 日本時間 20:30
+      const button = await screen.findByRole('button', { name: '＋ 予約する' })
+      expect(button).toBeDisabled()
+      expect(button).toHaveAttribute('title', '本日の受付は終了しました')
+
+      await userEvent.click(screen.getByRole('button', { name: '前の日' }))
+      expect(button).toBeDisabled()
+      expect(button).toHaveAttribute('title', '過去の日は予約できません')
+    })
+
+    it('次の日に動かすと、その日の最初の空きで開く', async () => {
+      mockApi()
+      render(<App now={() => new Date('2026-11-20T11:30:00Z')} />)
+      await screen.findByRole('button', { name: '＋ 予約する' })
+      await userEvent.click(screen.getByRole('button', { name: '次の日' }))
+      const button = screen.getByRole('button', { name: '＋ 予約する' })
+      await waitFor(() => expect(button).toBeEnabled())
+
+      await userEvent.click(button)
+      expect(within(screen.getByRole('dialog', { name: '予約' })).getByLabelText('開始')).toHaveValue('480')
+    })
+  })
+
   describe('予約の変更', () => {
     beforeEach(() => vi.spyOn(window, 'confirm').mockReturnValue(true))
     afterEach(() => vi.restoreAllMocks())

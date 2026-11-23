@@ -342,6 +342,11 @@ header.top {
   margin: 0;
   flex: 1;
 }
+.infoactions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .legendwrap {
   position: relative;
 }

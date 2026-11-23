@@ -78,6 +78,7 @@
   .infobar { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:8px; }
   .infobar .hint { margin:0; flex:1; white-space:nowrap; }
   .legendwrap { position:relative; }
+  .infoactions { display:flex; align-items:center; gap:10px; }
   .help { width:28px; height:28px; padding:0; border-radius:50%; font-weight:bold; color:var(--blue); line-height:1; }
   .legend { position:absolute; right:0; top:calc(100% + 6px); z-index:15; display:flex; flex-direction:column; gap:8px; padding:12px 16px; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.25); font-size:13px; color:var(--text); white-space:nowrap; }
   .legend[hidden] { display:none; }
@@ -151,6 +152,8 @@
     </div>
     <div class="infobar">
       <p class="hint" id="hint"></p>
+      <div class="infoactions">
+      <button type="button" class="primary" id="newBtn" title="空いている 30 分で予約の小窓を開きます">＋ 予約する</button>
       <div class="legendwrap">
         <button type="button" class="help" id="legendBtn" aria-label="色の説明を見る" title="色の説明">？</button>
         <div class="legend" id="legend" hidden>
@@ -159,6 +162,7 @@
           <div class="li"><span style="background:var(--other)"></span>ほかの人の予約</div>
           <div class="li"><span style="background:var(--hatch)"></span>過去（予約できません）</div>
         </div>
+      </div>
       </div>
     </div>
     <div class="gridwrap"><table id="grid"></table><div id="vlines"></div><div id="nowline"></div></div>
@@ -588,6 +592,17 @@ function setTab(t) {
 }
 $("tabMine").onclick = () => setTab("mine");
 $("tabDay").onclick = () => setTab("day");
+// キーボードだけで予約を始める入口: 見ている日の、最初の空き 30 分で小窓を開く
+$("newBtn").onclick = () => {
+  const from = Math.max(OPEN, minStart(viewDate));
+  for (const r of rooms) for (let s=from; s+UNIT<=CLOSE; s+=UNIT) {
+    if (overlaps(r.id, viewDate, s, s+UNIT, null)) continue;
+    sel = {roomId:r.id, date:viewDate, start:s, end:s+UNIT, draft:true}; renderGrid();
+    openPop({mode:"new", roomId:r.id, date:viewDate, start:s, end:s+UNIT, purpose:""}, $("newBtn").getBoundingClientRect());
+    return;
+  }
+  toast("この日は空きがありません");
+};
 $("legendBtn").onclick = () => { $("legend").hidden = !$("legend").hidden; };
 closeOnOutside(() => !$("legend").hidden, $("legend"), $("legendBtn"), () => { $("legend").hidden = true; });
 document.addEventListener("keydown", e => { if (e.key==="Escape") $("legend").hidden = true; });
