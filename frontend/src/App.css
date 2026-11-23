@@ -154,15 +154,34 @@ header.top {
   right: 0;
   width: auto; /* 部品の標準は「中身の幅」。左右の端（◀ の左端〜現在時刻の右端）まで広げる */
   z-index: 25;
-  transition: opacity 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 16px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
 }
+/*
+ * カーソルが外に出たときは、ガラスのように透かす（予約表を透かして見る）。
+ * 全体の opacity は使わない（輪郭と影まで薄くなって、場所が分からなくなるため）。中身だけを薄くして、
+ * 背景はごく薄い白、輪郭は白い細線＋外側に薄い濃い色の細線（白いカードの上でも見える）、影は残す。
+ */
+.cal > * {
+  transition: opacity 0.15s;
+}
 .cal.faded {
-  opacity: 0.2; /* カーソルが外に出たときは半透明（予約表を透かして見る） */
+  --glass-content: 0.12; /* 中身（日付・点）の濃さ。数字を小さくするほど薄い */
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(40, 50, 70, 0.32),
+    0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.cal.faded > * {
+  opacity: var(--glass-content);
 }
 .cal::before {
   /* 日付ボタンとの 6px のすき間も、カレンダーの一部として扱う（通ると半透明にならない） */
