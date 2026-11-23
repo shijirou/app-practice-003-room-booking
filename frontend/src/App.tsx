@@ -162,7 +162,15 @@ export default function App({ now = () => new Date() }: Props) {
 
   /** 小窓の入力が変わった。日付を変えたら、表もその日に切り替える */
   const changeForm = (form: Form) => {
-    setPopup((p) => (p?.kind === 'form' ? { ...p, form } : p))
+    setPopup((p) => {
+      if (p?.kind !== 'form') return p
+      // 変更中に会議室を変えたら、小窓が移した先の行（点線の仮表示）を隠さないよう、その行の近くへ動かす
+      if (p.editId !== undefined && form.roomId !== p.form.roomId) {
+        const row = document.querySelector(`td[data-room="${form.roomId}"]`)?.closest('tr')
+        if (row) return { ...p, form, pos: { ...p.pos, top: placePopup(row.getBoundingClientRect(), RESERVE_HEIGHT).top } }
+      }
+      return { ...p, form }
+    })
     if (form.date && form.date !== date) setDate(form.date)
   }
 

@@ -777,6 +777,29 @@ describe('App', () => {
       expect(puts).toEqual([])
     })
 
+    it('変更で会議室を変えると、小窓が仮表示のある行の近くへ動く', async () => {
+      // 行の位置を、行の順番で決めた値にする（jsdom には画面上の位置が無いため）
+      const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        const row = this.closest('tr')
+        const top = row ? [...(row.parentElement?.children ?? [])].indexOf(row) * 40 : 0
+        return { left: 50, top, bottom: top + 30, right: 100, width: 50, height: 30, x: 50, y: top, toJSON: () => ({}) }
+      })
+      try {
+        mockApi({ day: () => json([reservation({})]) })
+        render(<App now={now} />)
+
+        await userEvent.click(await screen.findByText('営業定例（田中）'))
+        await userEvent.click(screen.getByRole('button', { name: '変更する' }))
+        const dialog = screen.getByRole('dialog', { name: '予約の変更' })
+        const before = Number.parseFloat(dialog.style.top)
+
+        await userEvent.selectOptions(within(dialog).getByLabelText('会議室'), '11') // 1 行下の会議室 B
+        await waitFor(() => expect(Number.parseFloat(dialog.style.top)).toBe(before + 40))
+      } finally {
+        spy.mockRestore()
+      }
+    })
+
     it('他の人の予約・始まった予約には［変更する］が出ない', async () => {
       mockApi({
         day: () =>
