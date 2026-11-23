@@ -3,7 +3,9 @@ package com.example.roombooking;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -73,5 +75,11 @@ public class ApiController {
 	@ResponseStatus(HttpStatus.CREATED)
 	ReservationResponse createReservation(@RequestBody CreateReservationRequest request) {
 		return reservations.create(request);
+	}
+
+	/** 予約を変更する。成功は 200。本文は作成と同じ（employeeId は、予約した本人かの確認に使う）。 */
+	@PutMapping("/reservations/{id}")
+	ReservationResponse updateReservation(@PathVariable Long id, @RequestBody CreateReservationRequest request) {
+		return reservations.update(id, request);
 	}
 }
