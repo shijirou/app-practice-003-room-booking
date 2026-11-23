@@ -641,6 +641,37 @@ header.top {
 .rcard.hl {
   border-color: #e0b100;
 }
+/* 自分のカードの中の、ジャンプ用ボタン（見た目はカードのまま） */
+.rcard .rmain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  align-self: stretch;
+  padding: 3px 10px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: inherit;
+}
+.rcard.jump {
+  padding: 0;
+}
+.rcard .btns {
+  display: flex;
+  gap: 6px;
+  padding-right: 10px;
+}
+.rcard.jump .rsub.fixed {
+  padding-right: 10px;
+}
+.rcard .btns button {
+  padding: 1px 8px;
+  font-size: 12px;
+}
 button.rcard {
   width: 100%;
   text-align: left;

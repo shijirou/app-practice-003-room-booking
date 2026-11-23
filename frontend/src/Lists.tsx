@@ -22,6 +22,8 @@ type Props = {
   onJump: (reservation: Reservation) => void
   /** 「みんな」のカードを押したとき（予約の内容を開く） */
   onOpen: (reservation: Reservation, card: HTMLElement) => void
+  /** 「自分の予約」のカードの［変更］を押したとき */
+  onEdit: (reservation: Reservation, card: HTMLElement) => void
   /** 読み込みに失敗したとき、やり直す */
   onRetry: () => void
 }
@@ -84,28 +86,38 @@ export default function Lists(props: Props) {
               上の表の空き枠を押して予約できます。
             </div>
           )}
-          {mine.map((r) => (
-            <button
-              type="button"
-              key={r.id}
-              className={`rcard mine jump${dateOf(r.startAt) === date ? ' here' : ''}${props.highlightId === r.id ? ' hl' : ''}`}
-              title={`押すと ${formatShortDate(dateOf(r.startAt))} にジャンプします`}
-              onClick={() => props.onJump(r)}
-              onMouseEnter={() => props.onHover(r.id)}
-              onMouseLeave={() => props.onHover(null)}
-            >
-              <div className="rtime">
-                {formatShortDate(dateOf(r.startAt))} {formatMinutes(minutesOf(r.startAt))}〜
-                {formatMinutes(minutesOf(r.endAt))}
+          {mine.map((r) => {
+            const started = isStarted(dateOf(r.startAt), minutesOf(r.startAt), today, nowMinutes)
+            return (
+              // カードの中に［変更］ボタンを置くので、カード全体は div。ジャンプは、カードのほぼ全体に広がるボタンで受ける
+              <div
+                key={r.id}
+                className={`rcard mine jump${dateOf(r.startAt) === date ? ' here' : ''}${props.highlightId === r.id ? ' hl' : ''}`}
+                title={`押すと ${formatShortDate(dateOf(r.startAt))} にジャンプします`}
+                onMouseEnter={() => props.onHover(r.id)}
+                onMouseLeave={() => props.onHover(null)}
+              >
+                <button type="button" className="rmain" onClick={() => props.onJump(r)}>
+                  <span className="rtime">
+                    {formatShortDate(dateOf(r.startAt))} {formatMinutes(minutesOf(r.startAt))}〜
+                    {formatMinutes(minutesOf(r.endAt))}
+                  </span>
+                  <span className="rsub">
+                    {roomName(r.roomId)} ／ {purposeOf(r)}
+                  </span>
+                </button>
+                {started ? (
+                  <span className="rsub fixed">進行中</span>
+                ) : (
+                  <div className="btns">
+                    <button type="button" onClick={(e) => props.onEdit(r, e.currentTarget.closest('.rcard') as HTMLElement)}>
+                      変更
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="rsub">
-                {roomName(r.roomId)} ／ {purposeOf(r)}
-              </div>
-              {isStarted(dateOf(r.startAt), minutesOf(r.startAt), today, nowMinutes) && (
-                <span className="rsub fixed">進行中</span>
-              )}
-            </button>
-          ))}
+            )
+          })}
         </div>
       )}
 

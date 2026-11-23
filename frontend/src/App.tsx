@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ApiError,
   createReservation,
+  updateReservation,
   fetchEmployees,
   fetchReservations,
   fetchRooms,
@@ -14,7 +15,7 @@ import Lists from './Lists'
 import { placePopup, type Pos } from './placePopup'
 import { DetailPopup, ReservePopup } from './Popups'
 import Timetable from './Timetable'
-import { CLOSE, dateOf, earliestStart, formatMinutes, isoOf, minutesInTokyo, todayInTokyo } from './time'
+import { CLOSE, dateOf, earliestStart, formatMinutes, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
 import { useLoaded } from './useLoaded'
 import { defaultEnd, type Form } from './validate'
 
@@ -23,8 +24,8 @@ type Props = {
   now?: () => Date
 }
 
-/** 開いている小窓。new は予約する小窓、view は予約の内容（見るだけ） */
-type Popup = { kind: 'new'; form: Form; pos: Pos } | { kind: 'view'; reservation: Reservation; pos: Pos }
+/** 開いている小窓。form は予約する・変更する小窓（editId があれば変更）、view は予約の内容 */
+type Popup = { kind: 'form'; form: Form; pos: Pos; editId?: number } | { kind: 'view'; reservation: Reservation; pos: Pos }
 
 /** 社員と会議室を、まとめて読み込む */
 async function fetchBase() {
@@ -106,12 +107,12 @@ export default function App({ now = () => new Date() }: Props) {
   /** 空き枠を押した。その開始から、30 分（1 枠）で小窓を開く */
   const openNew = (roomId: number, start: number, rect: DOMRect) => {
     const form: Form = { roomId, date, start, end: defaultEnd(start), purpose: '' }
-    setPopup({ kind: 'new', form, pos: placePopup(rect, RESERVE_HEIGHT) })
+    setPopup({ kind: 'form', form, pos: placePopup(rect, RESERVE_HEIGHT) })
   }
 
   /** ドラッグで範囲を選んだ。その範囲で小窓を開く */
   const openDrag = (roomId: number, start: number, end: number, rect: DOMRect) => {
-    setPopup({ kind: 'new', form: { roomId, date, start, end, purpose: '' }, pos: placePopup(rect, RESERVE_HEIGHT) })
+    setPopup({ kind: 'form', form: { roomId, date, start, end, purpose: '' }, pos: placePopup(rect, RESERVE_HEIGHT) })
   }
 
   /** その予約の内容の小窓が、いま開いているか */
@@ -138,27 +139,50 @@ export default function App({ now = () => new Date() }: Props) {
     openView(reservation, (cell ?? card).getBoundingClientRect())
   }
 
+  /** 予約の内容の小窓・自分のカードの［変更］を押した。その予約の値が入った状態で、変更の小窓を開く */
+  const openEdit = (r: Reservation, pos: Pos) => {
+    const form: Form = {
+      roomId: r.roomId,
+      date: dateOf(r.startAt),
+      start: minutesOf(r.startAt),
+      end: minutesOf(r.endAt),
+      purpose: r.purpose ?? '',
+    }
+    setDate(form.date)
+    setHighlightId(null)
+    setPopup({ kind: 'form', form, pos, editId: r.id })
+  }
+
+  /** 自分のカードの［変更］。表の同じ予約の枠の近くに小窓を出す（その日の表が出る前は、カードの近く） */
+  const editFromCard = (r: Reservation, card: HTMLElement) => {
+    window.scrollTo(0, 0)
+    const cell = dateOf(r.startAt) === date ? document.querySelector(`td[data-id="${r.id}"]`) : null
+    openEdit(r, placePopup((cell ?? card).getBoundingClientRect(), RESERVE_HEIGHT))
+  }
+
   /** 小窓の入力が変わった。日付を変えたら、表もその日に切り替える */
   const changeForm = (form: Form) => {
-    setPopup((p) => (p?.kind === 'new' ? { ...p, form } : p))
+    setPopup((p) => (p?.kind === 'form' ? { ...p, form } : p))
     if (form.date && form.date !== date) setDate(form.date)
   }
 
   const create = async (form: Form) => {
     if (selfId === null) throw new ApiError('社員を選んでください')
     const purpose = form.purpose.trim()
-    const created = await createReservation({
+    const editId = popup?.kind === 'form' ? popup.editId : undefined
+    const input = {
       employeeId: selfId,
       roomId: form.roomId,
       startAt: isoOf(form.date, form.start),
       endAt: isoOf(form.date, form.end),
       purpose: purpose === '' ? null : purpose,
-    })
+    }
+    const created = editId === undefined ? await createReservation(input) : await updateReservation(editId, input)
     setPopup(null)
     setDate(form.date)
     setReload((n) => n + 1)
     flash(created.id)
-    showToast('予約しました')
+    showToast(editId === undefined ? '予約しました' : '予約を変更しました')
   }
 
   const failure =
@@ -172,8 +196,13 @@ export default function App({ now = () => new Date() }: Props) {
         ? ' 本日の受付は終了しました。'
         : ` 今日は ${formatMinutes(firstStart)} 以降。`)
 
+  // 変更中は、元の予約の枠を表から隠す（点線の仮表示に置き換わる。自分の古い時間とは重ならない）
+  const editId = popup?.kind === 'form' ? popup.editId : undefined
+  const dayReservations =
+    reservations.status === 'ok' ? reservations.data.filter((r) => r.id !== editId) : null
+
   const draft =
-    popup?.kind === 'new' && popup.form.date === date
+    popup?.kind === 'form' && popup.form.date === date
       ? { roomId: popup.form.roomId, start: popup.form.start, end: popup.form.end }
       : null
 
@@ -232,7 +261,7 @@ export default function App({ now = () => new Date() }: Props) {
           reservations.status === 'ok' && (
             <Timetable
               rooms={base.data.rooms}
-              reservations={reservations.data}
+              reservations={dayReservations ?? reservations.data}
               date={date}
               today={today}
               nowMinutes={nowMinutes}
@@ -264,18 +293,20 @@ export default function App({ now = () => new Date() }: Props) {
           onHover={setHighlightId}
           onJump={jump}
           onOpen={openFromCard}
+          onEdit={editFromCard}
           onRetry={() => setRetry((n) => n + 1)}
         />
       )}
 
-      {base.status === 'ok' && popup?.kind === 'new' && (
+      {base.status === 'ok' && popup?.kind === 'form' && (
         <ReservePopup
           form={popup.form}
           rooms={base.data.rooms}
           pos={popup.pos}
           today={today}
           nowMinutes={nowMinutes}
-          existing={reservations.status === 'ok' && popup.form.date === date ? reservations.data : null}
+          existing={popup.form.date === date ? dayReservations : null}
+          editing={popup.editId !== undefined}
           onChange={changeForm}
           onClose={() => setPopup(null)}
           onSubmit={create}
@@ -289,6 +320,7 @@ export default function App({ now = () => new Date() }: Props) {
           pos={popup.pos}
           today={today}
           nowMinutes={nowMinutes}
+          onEdit={() => openEdit(popup.reservation, popup.pos)}
           onClose={() => setPopup(null)}
         />
       )}
