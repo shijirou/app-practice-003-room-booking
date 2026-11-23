@@ -342,10 +342,8 @@ header.top {
   margin: 0;
   flex: 1;
 }
-.infoactions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.datebar-actions {
+  margin-left: auto; /* 日付の並びの右端 */
 }
 .legendwrap {
   position: relative;

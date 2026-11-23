@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import Calendar from "./Calendar";
 import {
   addDays,
@@ -16,6 +16,8 @@ type Props = {
   selfId: number | null;
   /** 予約を作ったあとなどに増やして、カレンダーの点を読み直す */
   reloadKey: number;
+  /** 日付の並びの右端に置くもの（［＋ 予約する］ボタン）。ミニカレンダーの幅（◀〜現在時刻）には含めない */
+  actions?: ReactNode;
 };
 
 /** 日付を動かすバー（前の日・今日・次の日・カレンダー）と、現在時刻の表示。 */
@@ -26,6 +28,7 @@ export default function DateBar({
   onChange,
   selfId,
   reloadKey,
+  actions,
 }: Props) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -101,6 +104,7 @@ export default function DateBar({
           </span>
         </div>
       </div>
+      {actions && <div className="datebar-actions">{actions}</div>}
     </div>
   );
 }

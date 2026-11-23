@@ -278,15 +278,7 @@ export default function App({ now = () => new Date() }: Props) {
           nowMinutes={nowMinutes}
           selfId={selfId}
           reloadKey={retry + reload}
-          onChange={(d) => {
-            setDate(d)
-            setHighlightId(null)
-            setPopup(null)
-          }}
-        />
-        <div className="infobar">
-          <p className="hint">{hint}</p>
-          <div className="infoactions">
+          actions={
             <button
               type="button"
               className="primary"
@@ -296,8 +288,16 @@ export default function App({ now = () => new Date() }: Props) {
             >
               ＋ 予約する
             </button>
-            <Legend />
-          </div>
+          }
+          onChange={(d) => {
+            setDate(d)
+            setHighlightId(null)
+            setPopup(null)
+          }}
+        />
+        <div className="infobar">
+          <p className="hint">{hint}</p>
+          <Legend />
         </div>
 
         {failure !== null ? (
