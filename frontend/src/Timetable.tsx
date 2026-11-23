@@ -228,10 +228,11 @@ export default function Timetable({
         )
       }
     }
-    const addDraft = () => {
+    const addDraft = (limit: number) => {
       if (drafted === null) return
       const start = Math.max(drafted.start, cursor)
-      const end = Math.min(drafted.end, CLOSE)
+      // 次の予約の手前で切る（既存の予約の枠を隠さない）
+      const end = Math.min(drafted.end, limit, CLOSE)
       if (end <= start) return
       addFree(start)
       cells.push(
@@ -244,7 +245,7 @@ export default function Timetable({
     let draftDone = drafted === null
     for (const r of inRoom) {
       if (!draftDone && drafted !== null && drafted.start < minutesOf(r.startAt)) {
-        addDraft()
+        addDraft(minutesOf(r.startAt))
         draftDone = true
       }
       const start = Math.max(minutesOf(r.startAt), cursor)
@@ -280,7 +281,7 @@ export default function Timetable({
       )
       cursor = end
     }
-    if (!draftDone) addDraft()
+    if (!draftDone) addDraft(CLOSE)
     addFree(CLOSE)
     return cells
   }

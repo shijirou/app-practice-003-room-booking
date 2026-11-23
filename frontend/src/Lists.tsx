@@ -125,12 +125,12 @@ export default function Lists(props: Props) {
               onMouseEnter={() => props.onHover(r.id)}
               onMouseLeave={() => props.onHover(null)}
             >
-              <div className="rtime">
+              <span className="rtime">
                 {formatMinutes(minutesOf(r.startAt))}〜{formatMinutes(minutesOf(r.endAt))}
-              </div>
-              <div className="rsub">
+              </span>
+              <span className="rsub">
                 {roomName(r.roomId)} ／ {purposeOf(r)}（{r.employeeName}）
-              </div>
+              </span>
               {r.employeeId === props.selfId && <span className="tag">自分</span>}
             </button>
           ))}

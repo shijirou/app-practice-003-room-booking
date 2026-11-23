@@ -100,6 +100,19 @@ class CreateApiTest {
 	}
 
 	@Test
+	void 読み取れない本文は原因に合わせた文で400になる() throws Exception {
+		create(body(tanaka, roomA, "あした", at(tomorrow, "10:00:00"), null))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("日時の形")));
+		create("{\"employeeId\": \"abc\", \"roomId\": 1}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("JSON の形")));
+		create("{こわれた")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("JSON の形")));
+	}
+
+	@Test
 	void 隣り合う予約と別の会議室の同じ時間は作れる() throws Exception {
 		create(roomA, tomorrow, "10:00:00", "11:00:00").andExpect(status().isCreated());
 		create(roomA, tomorrow, "11:00:00", "12:00:00").andExpect(status().isCreated());
