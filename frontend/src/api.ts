@@ -72,7 +72,7 @@ export const updateReservation = (id: number, input: NewReservation) =>
     body: JSON.stringify(input),
   })
 
-export const fetchEmployees =() => getJson<Employee[]>('/api/employees')
+export const fetchEmployees = () => getJson<Employee[]>('/api/employees')
 
 export const fetchRooms = () => getJson<Room[]>('/api/rooms')
 
