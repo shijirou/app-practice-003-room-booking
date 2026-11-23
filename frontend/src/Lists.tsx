@@ -116,7 +116,7 @@ export default function Lists(props: Props) {
                       変更
                     </button>
                     <button type="button" className="danger" onClick={() => props.onCancel(r)}>
-                      キャンセル
+                      予約をキャンセル
                     </button>
                   </div>
                 )}

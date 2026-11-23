@@ -864,7 +864,7 @@ describe('App', () => {
       render(<App now={now} />)
 
       await userEvent.click(await screen.findByText('営業定例（田中）'))
-      await userEvent.click(screen.getByRole('button', { name: 'キャンセルする' }))
+      await userEvent.click(screen.getByRole('button', { name: '予約をキャンセルする' }))
 
       expect(window.confirm).toHaveBeenCalledWith('この予約をキャンセルしますか？')
       expect(await screen.findByRole('status')).toHaveTextContent('予約をキャンセルしました')
@@ -880,7 +880,7 @@ describe('App', () => {
       render(<App now={now} />)
 
       await userEvent.click(await screen.findByText('営業定例（田中）'))
-      await userEvent.click(screen.getByRole('button', { name: 'キャンセルする' }))
+      await userEvent.click(screen.getByRole('button', { name: '予約をキャンセルする' }))
 
       expect(deletes).toEqual([])
       expect(screen.getByRole('dialog', { name: '予約の内容' })).toBeInTheDocument()
@@ -898,7 +898,7 @@ describe('App', () => {
       })
       render(<App now={now} />)
 
-      const buttons = await screen.findAllByRole('button', { name: 'キャンセル' })
+      const buttons = await screen.findAllByRole('button', { name: '予約をキャンセル' })
       expect(buttons).toHaveLength(1) // 朝会は進行中
       await userEvent.click(buttons[0])
 
@@ -915,7 +915,7 @@ describe('App', () => {
       render(<App now={now} />)
 
       await userEvent.click(await screen.findByText('営業定例（田中）'))
-      await userEvent.click(screen.getByRole('button', { name: 'キャンセルする' }))
+      await userEvent.click(screen.getByRole('button', { name: '予約をキャンセルする' }))
 
       expect(await screen.findByRole('status')).toHaveTextContent('始まった予約はキャンセルできません')
     })
@@ -931,9 +931,9 @@ describe('App', () => {
       render(<App now={now} />)
 
       await userEvent.click(await screen.findByText('朝会（田中）'))
-      expect(screen.queryByRole('button', { name: 'キャンセルする' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '予約をキャンセルする' })).not.toBeInTheDocument()
       await userEvent.click(screen.getByText('商談（佐藤）'))
-      expect(screen.queryByRole('button', { name: 'キャンセルする' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '予約をキャンセルする' })).not.toBeInTheDocument()
     })
   })
 })

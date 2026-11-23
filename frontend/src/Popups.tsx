@@ -184,7 +184,7 @@ export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinu
       {!note && (
         <div className="pbtns">
           <button type="button" className="danger" onClick={onCancel}>
-            キャンセルする
+            予約をキャンセルする
           </button>
           <button type="button" className="primary" onClick={onEdit}>
             変更する
