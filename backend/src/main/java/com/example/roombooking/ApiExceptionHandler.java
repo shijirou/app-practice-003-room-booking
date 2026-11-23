@@ -2,11 +2,15 @@ package com.example.roombooking;
 
 import java.sql.SQLException;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -14,6 +18,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 /** 失敗は {"message": "..."} の同じ形で返す（docs/data-design.md の「失敗したときの返し方」）。 */
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+	private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
 	@ExceptionHandler(BadRequestException.class)
 	ResponseEntity<Map<String, String>> badRequest(BadRequestException e) {
@@ -24,6 +30,12 @@ public class ApiExceptionHandler {
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
 	ResponseEntity<Map<String, String>> typeMismatch(MethodArgumentTypeMismatchException e) {
 		return body(HttpStatus.BAD_REQUEST, e.getName() + " の値が正しくありません");
+	}
+
+	/** 必ず付ける値（例: from・to）が足りないとき */
+	@ExceptionHandler(MissingServletRequestParameterException.class)
+	ResponseEntity<Map<String, String>> missingParameter(MissingServletRequestParameterException e) {
+		return body(HttpStatus.BAD_REQUEST, e.getParameterName() + " を指定してください");
 	}
 
 	@ExceptionHandler(NotFoundException.class)
@@ -63,7 +75,7 @@ public class ApiExceptionHandler {
 				return body(HttpStatus.CONFLICT, ReservationService.OVERLAP_MESSAGE);
 			}
 		}
-		throw e;
+		return unexpected(e);
 	}
 
 	/**
@@ -77,7 +89,31 @@ public class ApiExceptionHandler {
 				return body(HttpStatus.CONFLICT, ReservationService.OVERLAP_MESSAGE);
 			}
 		}
-		throw e;
+		return unexpected(e);
+	}
+
+	/**
+	 * 上のどれにも当てはまらないもの。宛先がない（404）・できない操作（405）・形式が違う（415）など、
+	 * Spring が決めた状態コードはそのまま使い、想定外は 500。どれも {"message": "..."} の形にそろえ、内部の詳細は返さない。
+	 */
+	@ExceptionHandler(Exception.class)
+	ResponseEntity<Map<String, String>> others(Exception e) {
+		if (e instanceof ErrorResponse errorResponse) {
+			var status = HttpStatus.valueOf(errorResponse.getStatusCode().value());
+			return body(status, switch (status) {
+				case NOT_FOUND -> "見つかりません";
+				case METHOD_NOT_ALLOWED -> "この方法では呼べません";
+				case UNSUPPORTED_MEDIA_TYPE -> "本文は JSON（application/json）で送ってください";
+				default -> "リクエストを処理できません";
+			});
+		}
+		return unexpected(e);
+	}
+
+	/** 想定外のエラー。詳しい内容は、サーバーのログにだけ残す（返事には出さない）。 */
+	private static ResponseEntity<Map<String, String>> unexpected(Exception e) {
+		log.error("想定外のエラー", e);
+		return body(HttpStatus.INTERNAL_SERVER_ERROR, "エラーが起きました");
 	}
 
 	private static ResponseEntity<Map<String, String>> body(HttpStatus status, String message) {
