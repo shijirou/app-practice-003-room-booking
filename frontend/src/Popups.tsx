@@ -47,6 +47,8 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
     const message = validateForm(form, { today, nowMinutes, existing })
     setError(message ?? '')
     if (message) return
+    // 変更は、保存する前に確認する（入力の検査を通ったあと。「キャンセル」なら小窓はそのまま）
+    if (editing && !window.confirm('この内容で予約を変更しますか？')) return
     setBusy(true)
     try {
       await onSubmit(form)

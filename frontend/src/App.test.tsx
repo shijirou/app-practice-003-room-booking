@@ -701,6 +701,9 @@ describe('App', () => {
   })
 
   describe('予約の変更', () => {
+    beforeEach(() => vi.spyOn(window, 'confirm').mockReturnValue(true))
+    afterEach(() => vi.restoreAllMocks())
+
     it('予約の内容の［変更する］で、元の値の入った小窓が開き、保存すると PUT で送ってお知らせを出す', async () => {
       let changed = false
       mockApi({
@@ -744,6 +747,35 @@ describe('App', () => {
       ])
       expect(posts).toEqual([])
       expect(screen.queryByRole('dialog', { name: '予約の変更' })).not.toBeInTheDocument()
+    })
+
+    it('保存の確認で「キャンセル」を選ぶと、何も送らず、小窓もそのまま', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false)
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '変更する' }))
+      const dialog = screen.getByRole('dialog', { name: '予約の変更' })
+      await userEvent.click(within(dialog).getByRole('button', { name: '変更を保存' }))
+
+      expect(window.confirm).toHaveBeenCalledWith('この内容で予約を変更しますか？')
+      expect(puts).toEqual([])
+      expect(screen.getByRole('dialog', { name: '予約の変更' })).toBeInTheDocument()
+    })
+
+    it('入力に問題があるときは、確認の前にエラーを出す（確認は出さない）', async () => {
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '変更する' }))
+      const dialog = screen.getByRole('dialog', { name: '予約の変更' })
+      fireEvent.change(within(dialog).getByLabelText('日付'), { target: { value: '' } })
+      await userEvent.click(within(dialog).getByRole('button', { name: '変更を保存' }))
+
+      expect(within(dialog).getByRole('alert')).toHaveTextContent('日付を選んでください')
+      expect(window.confirm).not.toHaveBeenCalled()
     })
 
     it('自分の古い時間と重なるずらし方は、画面の検査で止めない（API に送る）', async () => {
