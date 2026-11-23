@@ -39,12 +39,16 @@ type Options = {
   create?: (body: Record<string, unknown>) => Response
   /** 予約を変更する依頼（PUT）への返事 */
   update?: (id: string, body: Record<string, unknown>) => Response
+  /** 予約をキャンセルする依頼（DELETE）への返事 */
+  cancel?: (url: string) => Response
 }
 
 /** 予約を作るために送られた内容 */
 let posts: Record<string, unknown>[] = []
 /** 予約を変更するために送られた内容（宛先の id つき） */
 let puts: { id: string; body: Record<string, unknown> }[] = []
+/** キャンセルするために送られた宛先 */
+let deletes: string[] = []
 
 /** fetch を偽物に差し替える。呼ばれた宛先（GET）の一覧を返す */
 function mockApi({
@@ -53,13 +57,19 @@ function mockApi({
   days = () => json([]),
   create = () => json(reservation({ id: 200 }), 201),
   update = () => json(reservation({})),
+  cancel = () => new Response(null, { status: 204 }),
 }: Options = {}) {
   const calls: string[] = []
   posts = []
   puts = []
+  deletes = []
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') {
+        deletes.push(url)
+        return Promise.resolve(cancel(url))
+      }
       if (init?.method === 'PUT') {
         const body = JSON.parse(String(init.body)) as Record<string, unknown>
         const id = url.split('/').pop() ?? ''
@@ -691,6 +701,9 @@ describe('App', () => {
   })
 
   describe('予約の変更', () => {
+    beforeEach(() => vi.spyOn(window, 'confirm').mockReturnValue(true))
+    afterEach(() => vi.restoreAllMocks())
+
     it('予約の内容の［変更する］で、元の値の入った小窓が開き、保存すると PUT で送ってお知らせを出す', async () => {
       let changed = false
       mockApi({
@@ -734,6 +747,35 @@ describe('App', () => {
       ])
       expect(posts).toEqual([])
       expect(screen.queryByRole('dialog', { name: '予約の変更' })).not.toBeInTheDocument()
+    })
+
+    it('保存の確認で「キャンセル」を選ぶと、何も送らず、小窓もそのまま', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false)
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '変更する' }))
+      const dialog = screen.getByRole('dialog', { name: '予約の変更' })
+      await userEvent.click(within(dialog).getByRole('button', { name: '変更を保存' }))
+
+      expect(window.confirm).toHaveBeenCalledWith('この内容で予約を変更しますか？')
+      expect(puts).toEqual([])
+      expect(screen.getByRole('dialog', { name: '予約の変更' })).toBeInTheDocument()
+    })
+
+    it('入力に問題があるときは、確認の前にエラーを出す（確認は出さない）', async () => {
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '変更する' }))
+      const dialog = screen.getByRole('dialog', { name: '予約の変更' })
+      fireEvent.change(within(dialog).getByLabelText('日付'), { target: { value: '' } })
+      await userEvent.click(within(dialog).getByRole('button', { name: '変更を保存' }))
+
+      expect(within(dialog).getByRole('alert')).toHaveTextContent('日付を選んでください')
+      expect(window.confirm).not.toHaveBeenCalled()
     })
 
     it('自分の古い時間と重なるずらし方は、画面の検査で止めない（API に送る）', async () => {
@@ -835,6 +877,95 @@ describe('App', () => {
       await userEvent.click(buttons[0])
       const dialog = screen.getByRole('dialog', { name: '予約の変更' })
       expect(within(dialog).getByLabelText('用件')).toHaveValue('営業定例')
+    })
+  })
+
+  describe('予約のキャンセル', () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    it('予約の内容の［キャンセルする］で、確認して OK なら DELETE で送り、小窓を閉じてお知らせを出し、表を読み直す', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      let cancelled = false
+      const calls = mockApi({
+        day: () => json(cancelled ? [] : [reservation({})]),
+        cancel: () => {
+          cancelled = true
+          return new Response(null, { status: 204 })
+        },
+      })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '予約をキャンセルする' }))
+
+      expect(window.confirm).toHaveBeenCalledWith('この予約をキャンセルしますか？')
+      expect(await screen.findByRole('status')).toHaveTextContent('予約をキャンセルしました')
+      expect(deletes).toEqual(['/api/reservations/100?employeeId=1'])
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      await waitFor(() => expect(screen.queryByText('営業定例（田中）')).not.toBeInTheDocument())
+      expect(calls.filter((u) => u === '/api/reservations?date=2026-11-20').length).toBeGreaterThan(1)
+    })
+
+    it('確認で「キャンセル」を選んだら、何も送らず、小窓もそのまま', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false)
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '予約をキャンセルする' }))
+
+      expect(deletes).toEqual([])
+      expect(screen.getByRole('dialog', { name: '予約の内容' })).toBeInTheDocument()
+    })
+
+    it('自分のカードの［キャンセル］でも消せる（始まった予約には出ない）', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      mockApi({
+        day: () => json([reservation({})]),
+        upcoming: () =>
+          json([
+            reservation({ id: 1, startAt: '2026-11-20T08:30:00+09:00', endAt: '2026-11-20T09:30:00+09:00', purpose: '朝会' }),
+            reservation({}),
+          ]),
+      })
+      render(<App now={now} />)
+
+      const buttons = await screen.findAllByRole('button', { name: '予約をキャンセル' })
+      expect(buttons).toHaveLength(1) // 朝会は進行中
+      await userEvent.click(buttons[0])
+
+      expect(await screen.findByRole('status')).toHaveTextContent('予約をキャンセルしました')
+      expect(deletes).toEqual(['/api/reservations/100?employeeId=1'])
+    })
+
+    it('断られたら、理由をお知らせに出す', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      mockApi({
+        day: () => json([reservation({})]),
+        cancel: () => json({ message: '始まった予約はキャンセルできません' }, 400),
+      })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '予約をキャンセルする' }))
+
+      expect(await screen.findByRole('status')).toHaveTextContent('始まった予約はキャンセルできません')
+    })
+
+    it('他の人の予約・始まった予約には［キャンセルする］が出ない', async () => {
+      mockApi({
+        day: () =>
+          json([
+            reservation({ id: 1, startAt: '2026-11-20T08:30:00+09:00', endAt: '2026-11-20T09:30:00+09:00', purpose: '朝会' }),
+            reservation({ id: 2, roomId: 11, employeeId: 2, employeeName: '佐藤架空', purpose: '商談' }),
+          ]),
+      })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('朝会（田中）'))
+      expect(screen.queryByRole('button', { name: '予約をキャンセルする' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByText('商談（佐藤）'))
+      expect(screen.queryByRole('button', { name: '予約をキャンセルする' })).not.toBeInTheDocument()
     })
   })
 })

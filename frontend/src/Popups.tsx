@@ -47,6 +47,8 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
     const message = validateForm(form, { today, nowMinutes, existing })
     setError(message ?? '')
     if (message) return
+    // 変更は、保存する前に確認する（入力の検査を通ったあと。「キャンセル」なら小窓はそのまま）
+    if (editing && !window.confirm('この内容で予約を変更しますか？')) return
     setBusy(true)
     try {
       await onSubmit(form)
@@ -141,11 +143,13 @@ type DetailProps = {
   nowMinutes: number
   /** ［変更する］を押した（自分の、始まる前の予約だけに出る） */
   onEdit: () => void
+  /** ［キャンセルする］を押した（同じく、自分の、始まる前の予約だけ） */
+  onCancel: () => void
   onClose: () => void
 }
 
-/** 予約の内容の小窓（変更できる。キャンセルは、あとの縦切りで足す）。 */
-export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onEdit, onClose }: DetailProps) {
+/** 予約の内容の小窓（自分の、始まる前の予約は、変更・キャンセルできる）。 */
+export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onEdit, onCancel, onClose }: DetailProps) {
   const box = useRef<HTMLDialogElement>(null)
   // 予約の枠・カードを押したときは、その押した操作（開く・同じ予約なら閉じる）に任せる
   useDismiss(true, box, onClose, false, '.rcard, td[data-id]')
@@ -181,6 +185,9 @@ export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinu
       {note && <div className="note">{note}</div>}
       {!note && (
         <div className="pbtns">
+          <button type="button" className="danger" onClick={onCancel}>
+            予約をキャンセルする
+          </button>
           <button type="button" className="primary" onClick={onEdit}>
             変更する
           </button>

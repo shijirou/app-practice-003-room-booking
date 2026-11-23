@@ -34,6 +34,19 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+/** 返事に中身がない呼び出し（キャンセルの 204 など）。失敗したときは、requestJson と同じ ApiError を投げる */
+async function requestNoContent(url: string, init: RequestInit): Promise<void> {
+  let response: Response
+  try {
+    response = await fetch(url, init)
+  } catch {
+    throw new ApiError('サーバーにつながりません。しばらくしてからもう一度お試しください。')
+  }
+  if (!response.ok) {
+    throw new ApiError(await messageOf(response))
+  }
+}
+
 /** 失敗の返事は {"message": "..."} の形。読めないときは決まった文を返す。 */
 async function messageOf(response: Response): Promise<string> {
   try {
@@ -71,6 +84,10 @@ export const updateReservation = (id: number, input: NewReservation) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
+
+/** 予約をキャンセルする（本当に消える）。employeeId は、予約した本人かの確認に使われる（本人以外は 403）。 */
+export const cancelReservation = (id: number, employeeId: number) =>
+  requestNoContent(`/api/reservations/${id}?employeeId=${employeeId}`, { method: 'DELETE' })
 
 export const fetchEmployees = () => getJson<Employee[]>('/api/employees')
 

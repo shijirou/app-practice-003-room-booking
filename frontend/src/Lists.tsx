@@ -24,6 +24,8 @@ type Props = {
   onOpen: (reservation: Reservation, card: HTMLElement) => void
   /** 「自分の予約」のカードの［変更］を押したとき */
   onEdit: (reservation: Reservation, card: HTMLElement) => void
+  /** 「自分の予約」のカードの［キャンセル］を押したとき */
+  onCancel: (reservation: Reservation) => void
   /** 読み込みに失敗したとき、やり直す */
   onRetry: () => void
 }
@@ -112,6 +114,9 @@ export default function Lists(props: Props) {
                   <div className="btns">
                     <button type="button" onClick={(e) => props.onEdit(r, e.currentTarget.closest('.rcard') as HTMLElement)}>
                       変更
+                    </button>
+                    <button type="button" className="danger" onClick={() => props.onCancel(r)}>
+                      予約をキャンセル
                     </button>
                   </div>
                 )}
