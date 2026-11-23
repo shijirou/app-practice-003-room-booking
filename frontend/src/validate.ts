@@ -1,4 +1,4 @@
-import type { Reservation } from './api'
+import type { Reservation, Room } from './api'
 import { CLOSE, OPEN, UNIT, addDays, earliestStart, formatMinutes, minutesOf } from './time'
 
 /** 予約する小窓に入力した内容。時刻は「0 時からの分」。 */
@@ -46,4 +46,21 @@ export function validateForm(form: Form, { today, nowMinutes, existing }: Contex
 /** 空き枠を押したときの終了時刻。30 分（1 枠）。空き枠は押せるので、次の予約や閉館を越えない。 */
 export function defaultEnd(start: number): number {
   return Math.min(CLOSE, start + UNIT)
+}
+
+/**
+ * ［＋ 予約する］ボタンで開く小窓の初めの値。会議室の並び順で、最初に空いている 30 分を探す（first は、予約を始められる最も早い時刻）。
+ * どこも空いていなければ、最初の会議室の最初の時刻（送るときに、重なりのエラーが出る）。
+ */
+export function firstFreeSlot(rooms: Room[], dayReservations: Reservation[], first: number): { roomId: number; start: number } | null {
+  const from = Math.max(OPEN, first)
+  if (rooms.length === 0 || from + UNIT > CLOSE) return null
+  for (const room of rooms) {
+    const inRoom = dayReservations.filter((r) => r.roomId === room.id)
+    for (let start = from; start + UNIT <= CLOSE; start += UNIT) {
+      const taken = inRoom.some((r) => minutesOf(r.startAt) < start + UNIT && minutesOf(r.endAt) > start)
+      if (!taken) return { roomId: room.id, start }
+    }
+  }
+  return { roomId: rooms[0].id, start: from }
 }

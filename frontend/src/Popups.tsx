@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { errorMessage } from './useLoaded'
 import type { Reservation, Room } from './api'
 import { CLOSE, OPEN, UNIT, dateOf, formatDateLabel, formatMinutes, isStarted, minutesOf } from './time'
@@ -26,15 +26,20 @@ type ReserveProps = {
   onClose: () => void
   /** 予約を作る。失敗したら例外を投げる（メッセージを小窓に出す） */
   onSubmit: (form: Form) => Promise<void>
+  /** 開いたとき、最初の入力欄（会議室）にキーボードの位置を移す（［＋ 予約する］ボタンから開いたとき） */
+  focusFirst?: boolean
 }
 
 /** 予約する小窓。入力のたびに、表へ仮表示が出る（form は親が持つ）。 */
-export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, onChange, onClose, onSubmit }: ReserveProps) {
+export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, focusFirst, onChange, onClose, onSubmit }: ReserveProps) {
   const box = useRef<HTMLDialogElement>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   // 変更中は、閉じるために外側を押しても、その操作を下の表やボタンに通さない（押した枠を選んでしまわない）
   useDismiss(true, box, onClose, editing)
+  useEffect(() => {
+    if (focusFirst) box.current?.querySelector<HTMLElement>('#p_room')?.focus()
+  }, [focusFirst])
 
   const setStart = (start: number) => {
     const end = form.end > start ? form.end : Math.min(start + 60, CLOSE)

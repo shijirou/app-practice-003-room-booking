@@ -148,6 +148,7 @@
         <div id="cal" role="dialog" aria-label="カレンダー" hidden></div>
       </div>
       <span class="clock" id="clock"></span>
+      <button type="button" class="primary" id="newBtn" style="margin-left:auto" title="空いている 30 分で予約の小窓を開きます">＋ 予約する</button>
     </div>
     <div class="infobar">
       <p class="hint" id="hint"></p>
@@ -588,6 +589,17 @@ function setTab(t) {
 }
 $("tabMine").onclick = () => setTab("mine");
 $("tabDay").onclick = () => setTab("day");
+// キーボードだけで予約を始める入口: 見ている日の、最初の空き 30 分で小窓を開く
+$("newBtn").onclick = () => {
+  const from = Math.max(OPEN, minStart(viewDate));
+  for (const r of rooms) for (let s=from; s+UNIT<=CLOSE; s+=UNIT) {
+    if (overlaps(r.id, viewDate, s, s+UNIT, null)) continue;
+    sel = {roomId:r.id, date:viewDate, start:s, end:s+UNIT, draft:true}; renderGrid();
+    openPop({mode:"new", roomId:r.id, date:viewDate, start:s, end:s+UNIT, purpose:""}, $("newBtn").getBoundingClientRect());
+    return;
+  }
+  toast("この日は空きがありません");
+};
 $("legendBtn").onclick = () => { $("legend").hidden = !$("legend").hidden; };
 closeOnOutside(() => !$("legend").hidden, $("legend"), $("legendBtn"), () => { $("legend").hidden = true; });
 document.addEventListener("keydown", e => { if (e.key==="Escape") $("legend").hidden = true; });

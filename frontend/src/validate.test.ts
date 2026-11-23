@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Reservation } from './api'
 import { isoOf } from './time'
-import { defaultEnd, validateForm, type Form } from './validate'
+import { defaultEnd, firstFreeSlot, validateForm, type Form } from './validate'
 
 const form = (over: Partial<Form> = {}): Form => ({
   roomId: 10,
@@ -68,5 +68,37 @@ describe('isoOf', () => {
   it('日付と分から、API に送る日時にする', () => {
     expect(isoOf('2026-11-20', 10 * 60 + 30)).toBe('2026-11-20T10:30:00+09:00')
     expect(isoOf('2026-11-20', 8 * 60)).toBe('2026-11-20T08:00:00+09:00')
+  })
+})
+
+describe('firstFreeSlot', () => {
+  const rooms = [
+    { id: 10, name: '会議室A', capacity: 4 },
+    { id: 11, name: '会議室B', capacity: 6 },
+  ]
+
+  it('予約がなければ、最初の会議室の、始められる最も早い時刻', () => {
+    expect(firstFreeSlot(rooms, [], 0)).toEqual({ roomId: 10, start: 8 * 60 })
+    expect(firstFreeSlot(rooms, [], 9 * 60 + 30)).toEqual({ roomId: 10, start: 9 * 60 + 30 })
+  })
+
+  it('最初の会議室の最初の空きを返す（予約の後ろ。隣り合う枠は空き）', () => {
+    const day = [reservation(10, '08:00', '09:30')]
+    expect(firstFreeSlot(rooms, day, 0)).toEqual({ roomId: 10, start: 9 * 60 + 30 })
+  })
+
+  it('最初の会議室が一日中埋まっていれば、次の会議室', () => {
+    const day = [reservation(10, '08:00', '14:00'), reservation(10, '14:00', '20:00')]
+    expect(firstFreeSlot(rooms, day, 0)).toEqual({ roomId: 11, start: 8 * 60 })
+  })
+
+  it('どこも空いていなければ、最初の会議室の最初の時刻（送るときに重なりが分かる）', () => {
+    const day = [reservation(10, '08:00', '20:00'), reservation(11, '08:00', '20:00')]
+    expect(firstFreeSlot(rooms, day, 0)).toEqual({ roomId: 10, start: 8 * 60 })
+  })
+
+  it('受付が終わっている（最後の枠を過ぎた）か、会議室がなければ null', () => {
+    expect(firstFreeSlot(rooms, [], 20 * 60)).toBeNull()
+    expect(firstFreeSlot([], [], 0)).toBeNull()
   })
 })
