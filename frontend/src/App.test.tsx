@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -698,6 +698,136 @@ describe('App', () => {
       await userEvent.click(await screen.findByRole('tab', { name: /の予約（みんな）/ }))
       await userEvent.click(screen.getByText('会議室A ／ 営業定例（田中架空）'))
       expect(screen.getByRole('dialog', { name: '予約の内容' })).toBeInTheDocument()
+    })
+  })
+
+  describe('予約表の矢印キー操作', () => {
+    // 今日 9:00。会議室 A に 10:00〜11:30 の自分の予約がある
+    const setup = async () => {
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+      await screen.findByText('営業定例（田中）')
+    }
+    const cell = (label: string, room = 0) => screen.getAllByRole('cell', { name: label })[room]
+    const focus = (el: HTMLElement) => act(() => el.focus())
+
+    it('表の中で Tab が止まるのは 1 か所（最初の会議室の、予約できる最初の枠）。過去の枠は止まらない', async () => {
+      await setup()
+      const stops = Array.from(document.querySelectorAll('.timetable td[tabindex="0"]'))
+      expect(stops).toHaveLength(1)
+      expect(stops[0]).toBe(cell('9:00 空き'))
+      expect(cell('8:00 過去')).not.toHaveAttribute('tabindex')
+    })
+
+    it('← → は同じ会議室で 1 マスずつ（予約済みは 1 マスで飛び越える）。Home・End は行の端', async () => {
+      await setup()
+      focus(cell('9:30 空き'))
+      await userEvent.keyboard('{ArrowRight}')
+      expect(screen.getByText('営業定例（田中）')).toHaveFocus() // 10:00〜11:30 は 1 マス
+      await userEvent.keyboard('{ArrowRight}')
+      expect(cell('11:30 空き')).toHaveFocus()
+      await userEvent.keyboard('{ArrowLeft}{ArrowLeft}')
+      expect(cell('9:30 空き')).toHaveFocus()
+      await userEvent.keyboard('{End}')
+      expect(cell('19:30 空き')).toHaveFocus()
+      await userEvent.keyboard('{Home}')
+      expect(cell('9:00 空き')).toHaveFocus() // 8:00〜9:00 は過去なので、9:00 が左端
+      await userEvent.keyboard('{ArrowLeft}') // 端では動かない
+      expect(cell('9:00 空き')).toHaveFocus()
+    })
+
+    it('↑ ↓ は別の会議室の同じ時刻へ。表の外には出ない。Tab が止まる位置も、動いた先になる', async () => {
+      await setup()
+      focus(cell('9:30 空き'))
+      await userEvent.keyboard('{ArrowDown}')
+      expect(cell('9:30 空き', 1)).toHaveFocus()
+      await userEvent.keyboard('{ArrowDown}') // いちばん下
+      expect(cell('9:30 空き', 1)).toHaveFocus()
+      await userEvent.keyboard('{ArrowUp}{ArrowUp}')
+      expect(cell('9:30 空き', 0)).toHaveFocus()
+      await userEvent.keyboard('{ArrowDown}')
+      expect(document.querySelector('.timetable td[tabindex="0"]')).toBe(cell('9:30 空き', 1))
+    })
+
+    it('空き枠で Enter を押すと 30 分の小窓が開き、キーボードの位置が小窓に移る。Esc で閉じると元のマスへ戻る', async () => {
+      await setup()
+      focus(cell('9:30 空き', 1))
+      await userEvent.keyboard('{Enter}')
+      const dialog = screen.getByRole('dialog', { name: '予約' })
+      expect(within(dialog).getByLabelText('会議室')).toHaveValue('11')
+      expect(within(dialog).getByLabelText('開始')).toHaveValue('570')
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('600')
+      expect(within(dialog).getByLabelText('会議室')).toHaveFocus()
+
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(cell('9:30 空き', 1)).toHaveFocus()
+    })
+
+    it('予約済みの枠で Enter を押すと予約の内容が開き、［変更する］に位置が移る', async () => {
+      await setup()
+      focus(screen.getByText('営業定例（田中）'))
+      await userEvent.keyboard('{Enter}')
+      const dialog = screen.getByRole('dialog', { name: '予約の内容' })
+      expect(within(dialog).getByRole('button', { name: '変更する' })).toHaveFocus()
+      await userEvent.keyboard('{Escape}')
+      expect(screen.getByText('営業定例（田中）')).toHaveFocus()
+    })
+
+    it('Shift + → で範囲を広げ、Enter でその範囲の小窓が開く。Shift + ← で縮められる', async () => {
+      await setup()
+      focus(cell('9:00 空き', 1))
+      await userEvent.keyboard('{Shift>}{ArrowRight}{ArrowRight}{/Shift}')
+      expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(3) // 9:00・9:30・10:00
+      await userEvent.keyboard('{Shift>}{ArrowLeft}{/Shift}')
+      expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(2)
+      await userEvent.keyboard('{Enter}')
+
+      const dialog = screen.getByRole('dialog', { name: '予約' })
+      expect(within(dialog).getByLabelText('会議室')).toHaveValue('11')
+      expect(within(dialog).getByLabelText('開始')).toHaveValue('540')
+      expect(within(dialog).getByLabelText('終了')).toHaveValue('600') // 9:00〜10:00
+      expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(0)
+    })
+
+    it('範囲が予約済みと重なると赤くなり、Enter では小窓は開かずお知らせが出る。Esc で選択をやめられる', async () => {
+      await setup()
+      focus(cell('9:30 空き'))
+      await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}') // 10:00 は予約済み
+      expect(screen.getByText('営業定例（田中）')).toHaveClass('bad')
+      await userEvent.keyboard('{Enter}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(await screen.findByRole('status')).toHaveTextContent('その時間はすでに予約があります')
+      expect(screen.getByText('営業定例（田中）')).not.toHaveClass('bad')
+
+      await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}')
+      expect(screen.getByText('営業定例（田中）')).toHaveClass('bad')
+      await userEvent.keyboard('{Escape}')
+      expect(screen.getByText('営業定例（田中）')).not.toHaveClass('bad')
+      expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(0)
+    })
+
+    it('予約済みの枠からは範囲を選び始めない。普通に移ると、選んでいた範囲はやめる', async () => {
+      await setup()
+      focus(screen.getByText('営業定例（田中）'))
+      await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}')
+      expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(0)
+
+      focus(cell('9:00 空き'))
+      await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}')
+      expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(2)
+      await userEvent.keyboard('{ArrowDown}')
+      expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(0)
+    })
+
+    it('［＋ 予約する］ボタンから開いた小窓を閉じると、ボタンに戻る', async () => {
+      await setup()
+      const button = screen.getByRole('button', { name: '＋ 予約する' })
+      focus(button)
+      await userEvent.keyboard('{Enter}')
+      expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
+      await userEvent.keyboard('{Escape}')
+      expect(button).toHaveFocus()
     })
   })
 

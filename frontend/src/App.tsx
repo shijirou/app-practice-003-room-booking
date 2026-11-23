@@ -26,7 +26,7 @@ type Props = {
 }
 
 /** 開いている小窓。form は予約する・変更する小窓（editId があれば変更）、view は予約の内容 */
-type Popup = { kind: 'form'; form: Form; pos: Pos; editId?: number; focusFirst?: boolean } | { kind: 'view'; reservation: Reservation; pos: Pos }
+type Popup = { kind: 'form'; form: Form; pos: Pos; editId?: number; focusFirst?: boolean } | { kind: 'view'; reservation: Reservation; pos: Pos; focusFirst?: boolean }
 
 /** 社員と会議室を、まとめて読み込む */
 async function fetchBase() {
@@ -97,6 +97,28 @@ export default function App({ now = () => new Date() }: Props) {
     toastTimer.current = setTimeout(() => setToast(null), TOAST_MS)
   }
 
+  // キーボードで小窓を開いたとき、開く前にキーボードの位置があった要素（マス・［＋ 予約する］ボタン）。閉じたら、そこへ戻す
+  // 表のマスは、小窓が開くと点線の枠に置き換わり、元の要素が無くなるので、マスは「会議室と時刻」で探し直す
+  const returnFocus = useRef<{ el: HTMLElement; cell: string | null } | null>(null)
+  const rememberFocus = (byKeyboard: boolean) => {
+    const el = document.activeElement
+    if (!byKeyboard || !(el instanceof HTMLElement)) {
+      returnFocus.current = null
+      return
+    }
+    const { room, from } = el.dataset
+    returnFocus.current = { el, cell: room && from ? `td[data-room="${room}"][data-from="${from}"]` : null }
+  }
+  useEffect(() => {
+    if (popup !== null || returnFocus.current === null) return
+    const { el, cell } = returnFocus.current
+    returnFocus.current = null
+    // マウスで別の場所を押して閉じたときは、そこからキーボードの位置を奪わない（位置が失われているときだけ戻す）
+    if (document.activeElement !== null && document.activeElement !== document.body) return
+    const target = (cell !== null ? document.querySelector<HTMLElement>(cell) : null) ?? (el.isConnected ? el : null)
+    target?.focus()
+  }, [popup])
+
   const jump = (r: Reservation) => {
     setPopup(null)
     setDate(dateOf(r.startAt))
@@ -106,9 +128,10 @@ export default function App({ now = () => new Date() }: Props) {
   }
 
   /** 空き枠を押した。その開始から、30 分（1 枠）で小窓を開く */
-  const openNew = (roomId: number, start: number, rect: DOMRect) => {
+  const openNew = (roomId: number, start: number, rect: DOMRect, byKeyboard = false) => {
     const form: Form = { roomId, date, start, end: defaultEnd(start), purpose: '' }
-    setPopup({ kind: 'form', form, pos: placePopup(rect, RESERVE_HEIGHT) })
+    rememberFocus(byKeyboard)
+    setPopup({ kind: 'form', form, pos: placePopup(rect, RESERVE_HEIGHT), focusFirst: byKeyboard })
   }
 
   /** ［＋ 予約する］ボタンを押した（キーボードだけで予約を始める入口）。見ている日の、最初の空き 30 分で小窓を開く */
@@ -117,24 +140,27 @@ export default function App({ now = () => new Date() }: Props) {
     const slot = firstFreeSlot(base.data.rooms, reservations.status === 'ok' ? reservations.data : [], earliestStart(date, today, nowMinutes))
     if (slot === null) return
     const form: Form = { roomId: slot.roomId, date, start: slot.start, end: defaultEnd(slot.start), purpose: '' }
+    rememberFocus(true)
     setPopup({ kind: 'form', form, pos: placePopup(rect, RESERVE_HEIGHT), focusFirst: true })
   }
 
   /** ドラッグで範囲を選んだ。その範囲で小窓を開く */
-  const openDrag = (roomId: number, start: number, end: number, rect: DOMRect) => {
-    setPopup({ kind: 'form', form: { roomId, date, start, end, purpose: '' }, pos: placePopup(rect, RESERVE_HEIGHT) })
+  const openDrag = (roomId: number, start: number, end: number, rect: DOMRect, byKeyboard = false) => {
+    rememberFocus(byKeyboard)
+    setPopup({ kind: 'form', form: { roomId, date, start, end, purpose: '' }, pos: placePopup(rect, RESERVE_HEIGHT), focusFirst: byKeyboard })
   }
 
   /** その予約の内容の小窓が、いま開いているか */
   const isViewing = (reservation: Reservation) => popup?.kind === 'view' && popup.reservation.id === reservation.id
 
   /** 予約の枠を押した。同じ予約の内容がすでに開いていれば、閉じる */
-  const openView = (reservation: Reservation, rect: DOMRect) => {
+  const openView = (reservation: Reservation, rect: DOMRect, byKeyboard = false) => {
+    rememberFocus(byKeyboard)
     if (isViewing(reservation)) {
       setPopup(null)
       return
     }
-    setPopup({ kind: 'view', reservation, pos: placePopup(rect, DETAIL_HEIGHT) })
+    setPopup({ kind: 'view', reservation, pos: placePopup(rect, DETAIL_HEIGHT), focusFirst: byKeyboard })
   }
 
   /** 「みんな」のカードを押した。表の同じ予約の枠の近くに、予約の内容を出す（開いているときは閉じる） */
@@ -231,7 +257,7 @@ export default function App({ now = () => new Date() }: Props) {
     base.status === 'error' ? base.message : reservations.status === 'error' ? reservations.message : null
   const firstStart = earliestStart(date, today, nowMinutes)
   const hint =
-    '空き枠を押して予約（ドラッグで長い時間も）。8:00〜20:00・30 分刻み。' +
+    '空き枠を押して予約（ドラッグで長い時間も）。8:00〜20:00・30 分刻み。キーボードは、表の中で矢印キー・Enter。' +
     (date !== today
       ? ''
       : firstStart >= CLOSE
@@ -377,6 +403,7 @@ export default function App({ now = () => new Date() }: Props) {
           nowMinutes={nowMinutes}
           onEdit={() => openEdit(popup.reservation, popup.pos)}
           onCancel={() => void cancel(popup.reservation)}
+          focusFirst={popup.focusFirst}
           onClose={() => setPopup(null)}
         />
       )}
