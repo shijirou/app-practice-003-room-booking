@@ -107,6 +107,7 @@ ALTER TABLE reservation ADD CONSTRAINT no_overlap
 | キャンセル（F5） | DELETE /api/reservations/{id}?employeeId=1 | employeeId | なし |
 
 - 変更・キャンセルは、予約した本人の employeeId のときだけ受け付ける。
+- 変更（PUT）の確認の順番: 予約がない 404 → 本人でない 403 → 始まっている 400（「始まった予約は変更できません」）→ 入力の検査 400 → 会議室がない 404 → 自分以外と重なる 409。重なりの確認は自分自身を除く。
 - `GET /api/reservations` は date か employeeId の**どちらか 1 つだけ**を付ける。両方・どちらもなしは 400。
 - 予約の返す中身は、id・roomId・employeeId・employeeName・startAt・endAt・purpose（画面で社員名を出すため）。
 - 日時は ISO 8601 の文字（例: `2026-11-20T10:00:00+09:00`）でやり取りする。

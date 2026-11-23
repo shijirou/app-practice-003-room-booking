@@ -25,6 +25,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 			""")
 	boolean existsOverlap(@Param("roomId") Long roomId, @Param("start") Instant start, @Param("end") Instant end);
 
+	/** existsOverlap と同じだが、変更する予約自身（excludeId）は除く。時間をずらしても自分とは重ならない。 */
+	@Query("""
+			select count(r) > 0 from Reservation r
+			where r.room.id = :roomId and r.startAt < :end and r.endAt > :start and r.id <> :excludeId
+			""")
+	boolean existsOverlapExcluding(@Param("roomId") Long roomId, @Param("start") Instant start,
+			@Param("end") Instant end, @Param("excludeId") Long excludeId);
+
 	/** その社員の、まだ終わっていない予約（進行中を含む）を、開始の早い順に返す。 */
 	@Query("""
 			select new com.example.roombooking.ReservationResponse(

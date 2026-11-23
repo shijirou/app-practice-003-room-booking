@@ -31,6 +31,11 @@ public class ApiExceptionHandler {
 		return body(HttpStatus.NOT_FOUND, e.getMessage());
 	}
 
+	@ExceptionHandler(ForbiddenException.class)
+	ResponseEntity<Map<String, String>> forbidden(ForbiddenException e) {
+		return body(HttpStatus.FORBIDDEN, e.getMessage());
+	}
+
 	@ExceptionHandler(ConflictException.class)
 	ResponseEntity<Map<String, String>> conflict(ConflictException e) {
 		return body(HttpStatus.CONFLICT, e.getMessage());
