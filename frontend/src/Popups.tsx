@@ -150,14 +150,25 @@ type DetailProps = {
   onEdit: () => void
   /** ［キャンセルする］を押した（同じく、自分の、始まる前の予約だけ） */
   onCancel: () => void
+  /** 開いたとき、主なボタン（なければ最初のボタン・「×」）にキーボードの位置を移す（表からキーボードで開いたとき） */
+  focusFirst?: boolean
   onClose: () => void
 }
 
 /** 予約の内容の小窓（自分の、始まる前の予約は、変更・キャンセルできる）。 */
-export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onEdit, onCancel, onClose }: DetailProps) {
+export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onEdit, onCancel, focusFirst, onClose }: DetailProps) {
   const box = useRef<HTMLDialogElement>(null)
   // 予約の枠・カードを押したときは、その押した操作（開く・同じ予約なら閉じる）に任せる
   useDismiss(true, box, onClose, false, '.rcard, td[data-id]')
+  useEffect(() => {
+    if (!focusFirst || !box.current) return
+    // 主なボタン（変更する）。なければ最初のボタン、それもなければ「×」
+    const target =
+      box.current.querySelector<HTMLElement>('.pbtns .primary') ??
+      box.current.querySelector<HTMLElement>('.pbtns button') ??
+      box.current.querySelector<HTMLElement>('.x')
+    target?.focus()
+  }, [focusFirst])
 
   const date = dateOf(r.startAt)
   const start = minutesOf(r.startAt)

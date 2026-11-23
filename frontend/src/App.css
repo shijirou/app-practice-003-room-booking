@@ -440,6 +440,12 @@ header.top {
   display: flex;
   justify-content: space-between;
 }
+.timetable td:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: -3px;
+  position: relative;
+  z-index: 2;
+}
 .timetable td.hr {
   border-left-color: #d6dbe2;
 }

@@ -20,14 +20,14 @@ type Props = {
   onHover: (id: number | null) => void
   /** 小窓で入力中の予約（点線の枠で仮表示する）。見ている日のものだけ渡す */
   draft: { roomId: number; start: number; end: number } | null
-  /** 空き枠を押して、そのまま離したとき（最大 1 時間で小窓を開く） */
-  onFreeClick: (roomId: number, start: number, rect: DOMRect) => void
-  /** 空き枠をドラッグして、start〜end を選んで離したとき */
-  onFreeDrag: (roomId: number, start: number, end: number, rect: DOMRect) => void
+  /** 空き枠を押して、そのまま離したとき（30 分で小窓を開く）。byKeyboard はキーボードの Enter・Space のとき */
+  onFreeClick: (roomId: number, start: number, rect: DOMRect, byKeyboard?: boolean) => void
+  /** 空き枠をドラッグ（または Shift + ← →）して、start〜end を選んで離した（Enter を押した）とき */
+  onFreeDrag: (roomId: number, start: number, end: number, rect: DOMRect, byKeyboard?: boolean) => void
   /** ドラッグが予約済みと重なったまま離したとき */
   onDragBlocked: () => void
   /** 予約済みの枠を押したとき */
-  onReservationClick: (reservation: Reservation, rect: DOMRect) => void
+  onReservationClick: (reservation: Reservation, rect: DOMRect, byKeyboard?: boolean) => void
 }
 
 type Drag = {
@@ -41,7 +41,14 @@ type Drag = {
   badHi: number
   /** 押した枠とは別の枠の上に、一度でも動いたか（押すだけのクリックと、動かして戻したドラッグを分ける） */
   moved: boolean
+  /** キーボード（Shift + ← →）で選んでいる範囲か。マウスのボタンを離したときの終了処理の対象にしない */
+  keyboard?: boolean
+  /** キーボードで選んでいる範囲の、動かしている側の端の枠の開始 */
+  cur?: number
 }
+
+/** 矢印キーで動けるマス（空き枠か予約済みの枠）。id は予約済みの枠のときだけ */
+type Nav = { from: number; to: number; id: number | null }
 
 const HOURS = Array.from({ length: (CLOSE - OPEN) / 60 }, (_, i) => OPEN + i * 60)
 // 縦線は 30 分ごと（OPEN と CLOSE の端は引かない）
@@ -79,12 +86,14 @@ export default function Timetable({
     dragRef.current = d
     setDrag(d)
   }
+  // 矢印キーで今いるマス（表の中で Tab が止まる 1 か所は、ここで決まる）
+  const [active, setActive] = useState<{ roomId: number; from: number } | null>(null)
 
   // 表の外で離しても、ドラッグを終わらせる
   useEffect(() => {
     const finish = () => {
       const d = dragRef.current
-      if (d === null) return
+      if (d === null || d.keyboard) return
       dragRef.current = null
       setDrag(null)
       const { onFreeClick, onFreeDrag, onDragBlocked } = latest.current
@@ -131,7 +140,7 @@ export default function Timetable({
    */
   const onMove = (e: React.MouseEvent) => {
     const d = dragRef.current
-    if (d === null) return
+    if (d === null || d.keyboard) return
     const td = (e.target as HTMLElement).closest('td')
     if (td === null) return
     if (td.dataset.from !== undefined && Number(td.dataset.room) === d.roomId) {
@@ -146,6 +155,93 @@ export default function Timetable({
         extend(d.roomId, Number(cell.dataset.from), Number(cell.dataset.to))
         return
       }
+    }
+  }
+
+  // 矢印キーで動けるマスの一覧（会議室ごと）と、表の中で Tab が止まる 1 か所
+  const navs = new Map(rooms.map((room) => [room.id, navOf(room.id)]))
+  let tabKey: string | null = null
+  const current = active && navs.get(active.roomId)?.find((c) => c.from <= active.from && active.from < c.to)
+  if (active && current) tabKey = `${active.roomId}:${current.from}`
+  for (const room of rooms) {
+    if (tabKey !== null) break
+    const first = navs.get(room.id)?.[0]
+    if (first) tabKey = `${room.id}:${first.from}`
+  }
+
+  const focusCell = (roomId: number, from: number) => {
+    document.querySelector<HTMLElement>(`td[data-room="${roomId}"][data-from="${from}"]`)?.focus()
+  }
+  const clearKeyboardSelection = () => {
+    if (dragRef.current?.keyboard) update(null)
+  }
+
+  /** Shift + ← → で、空き枠の範囲を 1 枠ずつ広げ縮める（ドラッグと同じ表示。重なると赤） */
+  const selectBy = (roomId: number, cell: Nav, dir: 1 | -1) => {
+    if (dragRef.current?.keyboard !== true) {
+      if (cell.id !== null) return // 予約済みの枠からは選び始めない
+      update({ roomId, anchor: cell.from, lo: cell.from, hi: cell.to, bad: false, badLo: 0, badHi: 0, moved: false, keyboard: true, cur: cell.from })
+    }
+    const next = (dragRef.current?.cur ?? cell.from) + dir * UNIT
+    if (next < Math.max(OPEN, firstStart) || next + UNIT > CLOSE) return
+    extend(roomId, next, next + UNIT)
+    if (dragRef.current) update({ ...dragRef.current, cur: next })
+  }
+
+  /** マスからキーボードの位置が出たとき。表の外に出たら、キーボードで選んでいた範囲はやめる */
+  const onCellBlur = (e: React.FocusEvent) => {
+    if (!(e.relatedTarget instanceof Element) || !e.relatedTarget.closest('.timetable')) clearKeyboardSelection()
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const td = (e.target as HTMLElement).closest('td')
+    if (td === null || td.dataset.from === undefined || td.dataset.room === undefined) return
+    const roomId = Number(td.dataset.room)
+    const list = navs.get(roomId) ?? []
+    const index = list.findIndex((c) => c.from === Number(td.dataset.from))
+    if (index < 0) return
+    const move = (rid: number, cell: Nav | undefined) => {
+      e.preventDefault()
+      if (!cell) return
+      clearKeyboardSelection()
+      setActive({ roomId: rid, from: cell.from })
+      focusCell(rid, cell.from)
+    }
+    const k = e.key
+    if (e.shiftKey && (k === 'ArrowLeft' || k === 'ArrowRight')) {
+      e.preventDefault()
+      selectBy(roomId, list[index], k === 'ArrowRight' ? 1 : -1)
+    } else if (k === 'ArrowLeft') move(roomId, list[index - 1])
+    else if (k === 'ArrowRight') move(roomId, list[index + 1])
+    else if (k === 'Home') move(roomId, list[0])
+    else if (k === 'End') move(roomId, list[list.length - 1])
+    else if (k === 'ArrowUp' || k === 'ArrowDown') {
+      const other = rooms[rooms.findIndex((r) => r.id === roomId) + (k === 'ArrowDown' ? 1 : -1)]
+      const cells = other ? (navs.get(other.id) ?? []) : []
+      const from = list[index].from
+      // 同じ時刻のマス。そこが過去などで動けないときは、いちばん近いマス
+      const target =
+        cells.find((c) => c.from <= from && from < c.to) ??
+        [...cells].sort((a, b) => Math.abs(a.from - from) - Math.abs(b.from - from))[0]
+      move(other?.id ?? roomId, target)
+    } else if (k === 'Enter' || k === ' ') {
+      e.preventDefault()
+      const d = dragRef.current
+      if (d?.keyboard) {
+        update(null)
+        if (d.bad) return onDragBlocked()
+        const rect = (document.querySelector(`td[data-room="${d.roomId}"][data-m="${d.lo}"]`) ?? td).getBoundingClientRect()
+        if (d.hi - d.lo === UNIT) onFreeClick(d.roomId, d.lo, rect, true)
+        else onFreeDrag(d.roomId, d.lo, d.hi, rect, true)
+        return
+      }
+      const cell = list[index]
+      const rsv = cell.id === null ? undefined : reservations.find((r) => r.id === cell.id)
+      if (rsv) onReservationClick(rsv, td.getBoundingClientRect(), true)
+      else onFreeClick(roomId, cell.from, td.getBoundingClientRect(), true)
+    } else if (k === 'Escape' && dragRef.current?.keyboard) {
+      e.preventDefault()
+      update(null)
     }
   }
 
@@ -188,6 +284,30 @@ export default function Timetable({
     </div>
   )
 
+  /** 矢印キーで動けるマス（過去と仮表示は除く）。cellsOf と同じ並びで作る */
+  function navOf(roomId: number): Nav[] {
+    const list: Nav[] = []
+    let cursor = OPEN
+    const addFree = (until: number) => {
+      for (; cursor < until; cursor += UNIT) {
+        if (cursor + UNIT > firstStart) list.push({ from: cursor, to: cursor + UNIT, id: null })
+      }
+    }
+    const inRoom = reservations
+      .filter((r) => r.roomId === roomId)
+      .sort((a, b) => minutesOf(a.startAt) - minutesOf(b.startAt))
+    for (const r of inRoom) {
+      const start = Math.max(minutesOf(r.startAt), cursor)
+      const end = Math.min(minutesOf(r.endAt), CLOSE)
+      if (end <= start) continue
+      addFree(start)
+      list.push({ from: start, to: end, id: r.id })
+      cursor = end
+    }
+    addFree(CLOSE)
+    return list
+  }
+
   function cellsOf(roomId: number) {
     const inRoom = reservations
       .filter((r) => r.roomId === roomId)
@@ -211,6 +331,10 @@ export default function Timetable({
             title={past ? '過去の時間は予約できません' : undefined}
             aria-label={`${formatMinutes(cursor)} ${past ? '過去' : '空き'}`}
             data-testid={past ? 'past' : 'free'}
+            tabIndex={past ? undefined : tabKey === `${roomId}:${start}` ? 0 : -1}
+            onFocus={past ? undefined : () => setActive({ roomId, from: start })}
+            onBlur={past ? undefined : onCellBlur}
+            onKeyDown={past ? undefined : onKeyDown}
             data-room={past ? undefined : roomId}
             data-m={past ? undefined : start}
             onMouseDown={
@@ -269,6 +393,10 @@ export default function Timetable({
           title={`${formatMinutes(start)}〜${formatMinutes(end)} ${purpose}（${r.employeeName}）`}
           data-testid="reservation"
           data-id={r.id}
+          tabIndex={tabKey === `${roomId}:${start}` ? 0 : -1}
+          onFocus={() => setActive({ roomId, from: start })}
+          onBlur={onCellBlur}
+          onKeyDown={onKeyDown}
           onClick={(e) => onReservationClick(r, e.currentTarget.getBoundingClientRect())}
           data-room={roomId}
           data-from={start}
