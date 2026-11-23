@@ -21,12 +21,20 @@ export function useDismiss(
         // 押した操作（mousedown とそのあとの click）を、下の要素に届けない
         e.stopPropagation()
         e.preventDefault()
+        const stop = () => {
+          clearTimeout(timer)
+          document.removeEventListener('click', eat, true)
+          document.removeEventListener('mousedown', stop, true)
+        }
         const eat = (ev: Event) => {
           ev.stopPropagation()
           ev.preventDefault()
+          stop()
         }
-        document.addEventListener('click', eat, { capture: true, once: true })
-        setTimeout(() => document.removeEventListener('click', eat, true), 400)
+        // click が来ないまま次の操作（新しい mousedown）が始まったり、400ms たったら、飲み込み役をやめる
+        const timer = setTimeout(stop, 400)
+        document.addEventListener('click', eat, true)
+        document.addEventListener('mousedown', stop, true)
       }
       close()
     }

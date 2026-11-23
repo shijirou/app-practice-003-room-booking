@@ -36,10 +36,15 @@ public class ApiExceptionHandler {
 		return body(HttpStatus.CONFLICT, e.getMessage());
 	}
 
-	/** 本文が JSON として読めない、日時の形が違うなど */
+	/** 本文が JSON として読めない、日時や数字の形が違うなど。原因に合わせて文を分ける */
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	ResponseEntity<Map<String, String>> unreadable(HttpMessageNotReadableException e) {
-		return body(HttpStatus.BAD_REQUEST, "送られた内容を読み取れません。日時は 2026-11-20T10:00:00+09:00 の形で指定してください");
+		for (Throwable t = e; t != null; t = t.getCause()) {
+			if (t.getMessage() != null && t.getMessage().contains("java.time")) {
+				return body(HttpStatus.BAD_REQUEST, "日時の形が正しくありません。2026-11-20T10:00:00+09:00 の形で指定してください");
+			}
+		}
+		return body(HttpStatus.BAD_REQUEST, "送られた内容を読み取れません。JSON の形と、各項目の型（数字か文字か）を確かめてください");
 	}
 
 	/**

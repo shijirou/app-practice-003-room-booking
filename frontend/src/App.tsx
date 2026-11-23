@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  ApiError,
   createReservation,
   fetchEmployees,
   fetchReservations,
@@ -144,7 +145,7 @@ export default function App({ now = () => new Date() }: Props) {
   }
 
   const create = async (form: Form) => {
-    if (selfId === null) return
+    if (selfId === null) throw new ApiError('社員を選んでください')
     const purpose = form.purpose.trim()
     const created = await createReservation({
       employeeId: selfId,
