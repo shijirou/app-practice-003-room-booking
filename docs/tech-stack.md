@@ -2,7 +2,7 @@
 
 [要件定義書](requirements.md) の「技術スタック」の詳細。
 **使うツールを足したり、バージョンを上げたりしたら、この表も更新する。**
-確認日: 2026-11-18（`npm view`・Maven Central・Gradle 公式で、正式公開された安定版の最新を確認）
+確認日: 2026-11-23 に画面側の版を `npm outdated` で再確認（そのほかは 2026-11-18。`npm view`・Maven Central・Gradle 公式で、正式公開された安定版の最新を確認）
 方針: 正式公開された安定版の最新を使う（β版・RC・SNAPSHOT は使わない）。状態: **一部作成済み**（DB・backend・画面の骨組みは作成済みで、版は backend/build.gradle と frontend/package.json と同じ。CI は GitHub Actions（`.github/workflows/ci.yml`。Action は SHA で固定））。
 
 ## 実行環境
@@ -24,8 +24,8 @@
 | Vitest / @vitest/coverage-v8 | 5.1.1 | 自動テストと網羅率 |
 | jsdom | 31.0.1 | テストの中でブラウザの代わりをする |
 | @testing-library/react | 16.3.3 | テストで画面を表示して操作する |
-| @testing-library/user-event | 14.6.12 | テストで人の操作を再現する |
-| @testing-library/jest-dom | 7.0.1 | テストの確認を書きやすくする |
+| @testing-library/user-event | 14.6.13 | テストで人の操作を再現する |
+| @testing-library/jest-dom | 8.0.0 | テストの確認を書きやすくする |
 
 ## API（Spring Boot）
 | 名前 | バージョン | 役割 |

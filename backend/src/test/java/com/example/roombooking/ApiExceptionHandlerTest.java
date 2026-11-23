@@ -1,7 +1,6 @@
 package com.example.roombooking;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.SQLException;
 import org.junit.jupiter.api.Test;
@@ -24,9 +23,21 @@ class ApiExceptionHandlerTest {
 	}
 
 	@Test
-	void ほかの理由のロック失敗は409にせずそのまま投げる() {
+	void ほかの理由のロック失敗は409にせず_内部の詳細を出さない500にする() {
 		var e = new CannotAcquireLockException("timeout", new SQLException("lock timeout", "55P03"));
 
-		assertThatThrownBy(() -> handler.lockFailure(e)).isSameAs(e);
+		var response = handler.lockFailure(e);
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+		assertThat(response.getBody()).containsEntry("message", "エラーが起きました");
+	}
+
+	@Test
+	void 想定外の例外は500で_message形式にする() {
+		var response = handler.others(new IllegalStateException("内部の事情"));
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+		assertThat(response.getBody()).containsEntry("message", "エラーが起きました");
+		assertThat(response.getBody().toString()).doesNotContain("内部の事情");
 	}
 }
