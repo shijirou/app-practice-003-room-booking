@@ -64,7 +64,15 @@ export const createReservation = (input: NewReservation) =>
     body: JSON.stringify(input),
   })
 
-export const fetchEmployees = () => getJson<Employee[]>('/api/employees')
+/** 予約を変更する。送る内容は作るときと同じ。employeeId は、予約した本人かの確認に使われる（本人以外は 403）。 */
+export const updateReservation = (id: number, input: NewReservation) =>
+  requestJson<Reservation>(`/api/reservations/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+
+export const fetchEmployees =() => getJson<Employee[]>('/api/employees')
 
 export const fetchRooms = () => getJson<Room[]>('/api/rooms')
 

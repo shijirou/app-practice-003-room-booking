@@ -20,6 +20,8 @@ type ReserveProps = {
   nowMinutes: number
   /** 小窓の日付の予約（検査用）。まだ読み込んでいないときは null */
   existing: Reservation[] | null
+  /** 予約の変更か（見出し・ボタンの文が変わる） */
+  editing: boolean
   onChange: (form: Form) => void
   onClose: () => void
   /** 予約を作る。失敗したら例外を投げる（メッセージを小窓に出す） */
@@ -27,11 +29,12 @@ type ReserveProps = {
 }
 
 /** 予約する小窓。入力のたびに、表へ仮表示が出る（form は親が持つ）。 */
-export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, onChange, onClose, onSubmit }: ReserveProps) {
+export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, onChange, onClose, onSubmit }: ReserveProps) {
   const box = useRef<HTMLDialogElement>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  useDismiss(true, box, onClose)
+  // 変更中は、閉じるために外側を押しても、その操作を下の表やボタンに通さない（押した枠を選んでしまわない）
+  useDismiss(true, box, onClose, editing)
 
   const setStart = (start: number) => {
     const end = form.end > start ? form.end : Math.min(start + 60, CLOSE)
@@ -54,10 +57,10 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, on
   }
 
   return (
-    <dialog open ref={box} className="pop" aria-label="予約" style={{ left: pos.left, top: pos.top }}>
+    <dialog open ref={box} className="pop" aria-label={editing ? '予約の変更' : '予約'} style={{ left: pos.left, top: pos.top }}>
       <form onSubmit={submit}>
         <div className="pop-head">
-          <strong>予約する</strong>
+          <strong>{editing ? '予約を変更する' : '予約する'}</strong>
           <button type="button" className="x" aria-label="閉じる" onClick={onClose}>
             ×
           </button>
@@ -121,7 +124,7 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, on
             やめる
           </button>
           <button type="submit" className="primary" disabled={busy}>
-            予約する
+            {editing ? '変更を保存' : '予約する'}
           </button>
         </div>
       </form>
@@ -136,11 +139,13 @@ type DetailProps = {
   pos: Pos
   today: string
   nowMinutes: number
+  /** ［変更する］を押した（自分の、始まる前の予約だけに出る） */
+  onEdit: () => void
   onClose: () => void
 }
 
-/** 予約の内容の小窓（見るだけ。変更・キャンセルは、あとの縦切りで足す）。 */
-export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onClose }: DetailProps) {
+/** 予約の内容の小窓（変更できる。キャンセルは、あとの縦切りで足す）。 */
+export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onEdit, onClose }: DetailProps) {
   const box = useRef<HTMLDialogElement>(null)
   // 予約の枠・カードを押したときは、その押した操作（開く・同じ予約なら閉じる）に任せる
   useDismiss(true, box, onClose, false, '.rcard, td[data-id]')
@@ -174,6 +179,13 @@ export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinu
         予約した人：{r.employeeName}
       </p>
       {note && <div className="note">{note}</div>}
+      {!note && (
+        <div className="pbtns">
+          <button type="button" className="primary" onClick={onEdit}>
+            変更する
+          </button>
+        </div>
+      )}
     </dialog>
   )
 }
