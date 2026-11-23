@@ -122,7 +122,8 @@ describe('App', () => {
     const calls = mockApi({ day: () => json([reservation({})]) })
     render(<App now={now} />)
     expect(await screen.findByText('営業定例（田中）')).toHaveClass('mine')
-    expect(calls).toContain('/api/reservations?employeeId=1')
+    // 「今後の予約」の取得は、表が出たあとの effect で始まるので、少し待つ（待たないと、たまに失敗する）
+    await waitFor(() => expect(calls).toContain('/api/reservations?employeeId=1'))
 
     await userEvent.selectOptions(screen.getByRole('combobox'), '佐藤架空')
     expect(screen.getByText('営業定例（田中）')).toHaveClass('busy')
