@@ -161,16 +161,28 @@ export default function App({ now = () => new Date() }: Props) {
     openEdit(r, placePopup((cell ?? card).getBoundingClientRect(), RESERVE_HEIGHT))
   }
 
-  /** ［キャンセル］［キャンセルする］を押した。確認で OK のときだけ消す。失敗したら、理由をお知らせに出して表を読み直す */
+  // キャンセルの通信中は、ほかのキャンセルを受け付けない（続けて押して 2 回送らない）
+  const cancelling = useRef(false)
+
+  /**
+   * ［キャンセル］［キャンセルする］を押した。確認で OK のときだけ消す。
+   * 成功しても失敗しても、その予約の小窓は閉じて（古い内容で操作させない）、表を読み直す。失敗の理由はお知らせに出す。
+   */
   const cancel = async (r: Reservation) => {
-    if (selfId === null || !window.confirm('この予約をキャンセルしますか？')) return
+    if (selfId === null || cancelling.current || !window.confirm('この予約をキャンセルしますか？')) return
+    cancelling.current = true
     try {
       await cancelReservation(r.id, selfId)
-      setPopup(null)
       showToast('予約をキャンセルしました')
     } catch (err) {
       showToast(errorMessage(err))
+    } finally {
+      cancelling.current = false
     }
+    // 別の予約の小窓（入力中の変更など）は閉じない
+    setPopup((p) =>
+      p !== null && (p.kind === 'view' ? p.reservation.id === r.id : p.editId === r.id) ? null : p,
+    )
     setReload((n) => n + 1)
   }
 
