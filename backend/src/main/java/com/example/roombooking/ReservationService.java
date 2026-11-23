@@ -70,15 +70,8 @@ public class ReservationService {
 		if (request == null || request.employeeId() == null || request.roomId() == null) {
 			throw new BadRequestException("社員と会議室を指定してください");
 		}
-		var reservation = reservations.findById(id)
-				.orElseThrow(() -> new NotFoundException("予約が見つかりません"));
+		var reservation = findOwnedNotStarted(id, request.employeeId(), "変更");
 		var employee = reservation.getEmployee();
-		if (!employee.getId().equals(request.employeeId())) {
-			throw new ForbiddenException("ほかの人の予約は変更できません");
-		}
-		if (!reservation.getStartAt().isAfter(clock.instant())) {
-			throw new BadRequestException("始まった予約は変更できません");
-		}
 		rules.checkTime(request.startAt(), request.endAt());
 		var purpose = rules.cleanPurpose(request.purpose());
 		var room = rooms.findById(request.roomId())
@@ -92,6 +85,30 @@ public class ReservationService {
 		reservation.change(room, start, end, purpose);
 		reservations.saveAndFlush(reservation);
 		return new ReservationResponse(id, room.getId(), employee.getId(), employee.getName(), start, end, purpose);
+	}
+
+	/**
+	 * 予約をキャンセルする（本当に消す）。順に、予約がなければ 404、本人でなければ 403、始まっていれば 400。
+	 */
+	@Transactional
+	public void cancel(Long id, Long employeeId) {
+		if (employeeId == null) {
+			throw new BadRequestException("社員を指定してください");
+		}
+		reservations.delete(findOwnedNotStarted(id, employeeId, "キャンセル"));
+	}
+
+	/** 変更・キャンセルの共通の確認。予約がなければ 404、本人でなければ 403、始まっていれば 400。action は文に入れる言葉。 */
+	private Reservation findOwnedNotStarted(Long id, Long employeeId, String action) {
+		var reservation = reservations.findById(id)
+				.orElseThrow(() -> new NotFoundException("予約が見つかりません"));
+		if (!reservation.getEmployee().getId().equals(employeeId)) {
+			throw new ForbiddenException("ほかの人の予約は" + action + "できません");
+		}
+		if (!reservation.getStartAt().isAfter(clock.instant())) {
+			throw new BadRequestException("始まった予約は" + action + "できません");
+		}
+		return reservation;
 	}
 
 	/** その社員の、今から先（進行中を含む）の予約を、開始の早い順に返す。社員がいなければ 404。 */
