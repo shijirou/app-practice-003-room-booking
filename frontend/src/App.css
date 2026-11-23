@@ -772,6 +772,14 @@ button.rcard {
 .times select {
   flex: 1;
 }
+button.danger {
+  color: var(--red);
+  border-color: #e3b5b1;
+}
+button.danger:hover {
+  background: #fdecea;
+  border-color: var(--red);
+}
 .pbtns {
   display: flex;
   justify-content: flex-end;

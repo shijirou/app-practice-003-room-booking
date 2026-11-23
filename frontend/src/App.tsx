@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ApiError,
+  cancelReservation,
   createReservation,
   updateReservation,
   fetchEmployees,
@@ -16,7 +17,7 @@ import { placePopup, type Pos } from './placePopup'
 import { DetailPopup, ReservePopup } from './Popups'
 import Timetable from './Timetable'
 import { CLOSE, dateOf, earliestStart, formatMinutes, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
-import { useLoaded } from './useLoaded'
+import { errorMessage, useLoaded } from './useLoaded'
 import { defaultEnd, type Form } from './validate'
 
 type Props = {
@@ -160,6 +161,19 @@ export default function App({ now = () => new Date() }: Props) {
     openEdit(r, placePopup((cell ?? card).getBoundingClientRect(), RESERVE_HEIGHT))
   }
 
+  /** ［キャンセル］［キャンセルする］を押した。確認で OK のときだけ消す。失敗したら、理由をお知らせに出して表を読み直す */
+  const cancel = async (r: Reservation) => {
+    if (selfId === null || !window.confirm('この予約をキャンセルしますか？')) return
+    try {
+      await cancelReservation(r.id, selfId)
+      setPopup(null)
+      showToast('予約をキャンセルしました')
+    } catch (err) {
+      showToast(errorMessage(err))
+    }
+    setReload((n) => n + 1)
+  }
+
   /** 小窓の入力が変わった。日付を変えたら、表もその日に切り替える */
   const changeForm = (form: Form) => {
     // 変更中に会議室を変えたら、小窓が移した先の行（点線の仮表示）を隠さないよう、その行の近くへ動かす。
@@ -301,6 +315,7 @@ export default function App({ now = () => new Date() }: Props) {
           onJump={jump}
           onOpen={openFromCard}
           onEdit={editFromCard}
+          onCancel={(r) => void cancel(r)}
           onRetry={() => setRetry((n) => n + 1)}
         />
       )}
@@ -328,6 +343,7 @@ export default function App({ now = () => new Date() }: Props) {
           today={today}
           nowMinutes={nowMinutes}
           onEdit={() => openEdit(popup.reservation, popup.pos)}
+          onCancel={() => void cancel(popup.reservation)}
           onClose={() => setPopup(null)}
         />
       )}
