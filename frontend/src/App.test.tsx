@@ -764,6 +764,19 @@ describe('App', () => {
       expect(await within(dialog).findByRole('alert')).toHaveTextContent('その時間はすでに予約があります')
     })
 
+    it('変更の小窓の外側を押すと閉じるだけで、押した下の空き枠は選ばない', async () => {
+      mockApi({ day: () => json([reservation({})]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('営業定例（田中）'))
+      await userEvent.click(screen.getByRole('button', { name: '変更する' }))
+      expect(screen.getByRole('dialog', { name: '予約の変更' })).toBeInTheDocument()
+
+      await userEvent.click(screen.getAllByRole('cell', { name: '13:00 空き' })[0])
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument() // 閉じるだけ。予約する小窓は開かない
+      expect(puts).toEqual([])
+    })
+
     it('他の人の予約・始まった予約には［変更する］が出ない', async () => {
       mockApi({
         day: () =>

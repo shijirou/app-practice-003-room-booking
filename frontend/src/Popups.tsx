@@ -33,7 +33,8 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
   const box = useRef<HTMLDialogElement>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  useDismiss(true, box, onClose)
+  // 変更中は、閉じるために外側を押しても、その操作を下の表やボタンに通さない（押した枠を選んでしまわない）
+  useDismiss(true, box, onClose, editing)
 
   const setStart = (start: number) => {
     const end = form.end > start ? form.end : Math.min(start + 60, CLOSE)
