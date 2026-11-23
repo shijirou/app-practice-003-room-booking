@@ -3,6 +3,7 @@ import { errorMessage } from './useLoaded'
 import type { Reservation, Room } from './api'
 import { CLOSE, OPEN, UNIT, dateOf, formatDateLabel, formatMinutes, isStarted, minutesOf } from './time'
 import type { Pos } from './placePopup'
+import TimeSelect from './TimeSelect'
 import { useDismiss } from './useDismiss'
 import { validateForm, type Form } from './validate'
 
@@ -28,10 +29,12 @@ type ReserveProps = {
   onSubmit: (form: Form) => Promise<void>
   /** 開いたとき、最初の入力欄（会議室）にキーボードの位置を移す（［＋ 予約する］ボタンから開いたとき） */
   focusFirst?: boolean
+  /** 時間のリストで、カーソルを合わせている（決定前の）時刻。表の青枠を連動させる。null は元に戻す */
+  onPreview?: (field: 'start' | 'end', value: number | null) => void
 }
 
 /** 予約する小窓。入力のたびに、表へ仮表示が出る（form は親が持つ）。 */
-export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, focusFirst, onChange, onClose, onSubmit }: ReserveProps) {
+export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, focusFirst, onPreview, onChange, onClose, onSubmit }: ReserveProps) {
   const box = useRef<HTMLDialogElement>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -40,6 +43,10 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
   useEffect(() => {
     if (focusFirst) box.current?.querySelector<HTMLElement>('#p_room')?.focus()
   }, [focusFirst])
+
+  // 時刻を選ぶと送れなくなる（4 時間を超える・過去・重なりなど）かを、送るときと同じ検査で調べる。リストで赤く表示する
+  const invalidWith = (next: Form) => validateForm(next, { today, nowMinutes, existing }) !== null
+  const startMoved = (start: number): Form => ({ ...form, start, end: form.end > start ? form.end : Math.min(start + 60, CLOSE) })
 
   const setStart = (start: number) => {
     const end = form.end > start ? form.end : Math.min(start + 60, CLOSE)
@@ -94,25 +101,23 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
         <div className="prow">
           <label htmlFor="p_start">時間</label>
           <div className="times">
-            <select id="p_start" aria-label="開始" value={form.start} onChange={(e) => setStart(Number(e.target.value))}>
-              {options(OPEN, CLOSE - UNIT).map((m) => (
-                <option key={m} value={m}>
-                  {formatMinutes(m)}
-                </option>
-              ))}
-            </select>
+            <TimeSelect
+              label="開始"
+              value={form.start}
+              times={options(OPEN, CLOSE - UNIT)}
+              isInvalid={(m) => invalidWith(startMoved(m))}
+              onChange={setStart}
+              onPreview={(v) => onPreview?.('start', v)}
+            />
             <span>〜</span>
-            <select
-              aria-label="終了"
+            <TimeSelect
+              label="終了"
               value={form.end}
-              onChange={(e) => onChange({ ...form, end: Number(e.target.value) })}
-            >
-              {options(form.start + UNIT, CLOSE).map((m) => (
-                <option key={m} value={m}>
-                  {formatMinutes(m)}
-                </option>
-              ))}
-            </select>
+              times={options(form.start + UNIT, CLOSE)}
+              isInvalid={(m) => invalidWith({ ...form, end: m })}
+              onChange={(end) => onChange({ ...form, end })}
+              onPreview={(v) => onPreview?.('end', v)}
+            />
           </div>
         </div>
         <div className="prow">

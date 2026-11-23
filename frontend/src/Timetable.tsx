@@ -19,7 +19,7 @@ type Props = {
   /** 表の予約枠にカーソルを重ねた・外したとき（下の一覧のカードを強調するため） */
   onHover: (id: number | null) => void
   /** 小窓で入力中の予約（点線の枠で仮表示する）。見ている日のものだけ渡す */
-  draft: { roomId: number; start: number; end: number } | null
+  draft: { roomId: number; start: number; end: number; invalid?: boolean } | null
   /** 空き枠を押して、そのまま離したとき（30 分で小窓を開く）。byKeyboard はキーボードの Enter・Space のとき */
   onFreeClick: (roomId: number, start: number, rect: DOMRect, byKeyboard?: boolean) => void
   /** 空き枠をドラッグ（または Shift + ← →）して、start〜end を選んで離した（Enter を押した）とき */
@@ -360,7 +360,7 @@ export default function Timetable({
       if (end <= start) return
       addFree(start)
       cells.push(
-        <td key="draft" className="draft" colSpan={(end - start) / UNIT} data-testid="draft">
+        <td key="draft" className={drafted.invalid ? 'draft invalid' : 'draft'} colSpan={(end - start) / UNIT} data-testid="draft">
           {formatMinutes(start)}〜{formatMinutes(end)} 予約中…
         </td>,
       )
