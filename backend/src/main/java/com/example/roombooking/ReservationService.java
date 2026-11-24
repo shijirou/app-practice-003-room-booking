@@ -154,10 +154,18 @@ public class ReservationService {
 				.toList();
 	}
 
-	/** "2026-11-20" の形の文字を日付にする。形が違えば 400。 */
+	/** 受け付ける日付の範囲。これより外は、日付の計算があふれて 500 になるのを避けるため、先に 400 で断る。 */
+	private static final LocalDate MIN_DATE = LocalDate.of(1900, 1, 1);
+	private static final LocalDate MAX_DATE = LocalDate.of(2200, 12, 31);
+
+	/** "2026-11-20" の形の文字を日付にする。形が違うか、範囲（1900〜2200 年）の外なら 400。 */
 	static LocalDate parseDate(String text) {
 		try {
-			return LocalDate.parse(text);
+			var date = LocalDate.parse(text);
+			if (date.isBefore(MIN_DATE) || date.isAfter(MAX_DATE)) {
+				throw new BadRequestException("日付は 1900〜2200 年の間で指定してください");
+			}
+			return date;
 		} catch (DateTimeException e) {
 			throw new BadRequestException("日付は 2026-11-20 の形で指定してください");
 		}
