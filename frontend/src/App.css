@@ -808,6 +808,24 @@ button.rcard {
 .pop .err {
   margin-bottom: 10px;
 }
+/* 自分の別の予約と重なっているときの注意（禁止ではない）。黄色 = 注意 */
+.pop .warn {
+  display: block;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  border: 1px solid #e6c46a;
+  border-radius: 6px;
+  background: #fff1cc;
+  color: #5c4500;
+  font-size: 13px;
+}
+.pop .warn strong,
+.pop .warn span {
+  display: block; /* 1 行目は見出し、2 行目以降は重なっている予約（1 件ずつ） */
+}
+.pop .warn span {
+  margin-top: 2px;
+}
 .prow {
   display: grid;
   grid-template-columns: 56px 1fr;

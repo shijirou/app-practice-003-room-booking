@@ -1119,6 +1119,102 @@ describe('App', () => {
     })
   })
 
+  describe('自分の別の予約との重なり（ダブルブッキングの警告と確認）', () => {
+    // 田中（自分）は会議室B の 10:00〜11:00、佐藤は会議室B の 12:00〜13:00 を予約済み
+    const own = reservation({ id: 100, roomId: 11, startAt: '2026-11-20T10:00:00+09:00', endAt: '2026-11-20T11:00:00+09:00', purpose: '営業定例' })
+    const others = reservation({ id: 101, roomId: 11, employeeId: 2, employeeName: '佐藤架空', startAt: '2026-11-20T12:00:00+09:00', endAt: '2026-11-20T13:00:00+09:00', purpose: '商談' })
+    const openRoomA = async (time: string) => {
+      await userEvent.click((await screen.findAllByRole('gridcell', { name: `${time} 空き` }))[0])
+      return screen.getByRole('dialog', { name: '予約' })
+    }
+
+    beforeEach(() => vi.spyOn(window, 'confirm').mockReturnValue(true))
+    afterEach(() => vi.restoreAllMocks())
+
+    it('別の会議室で自分の予約と重なると、小窓に注意文が出て、押すと確認を経て予約できる', async () => {
+      mockApi({ day: () => json([own, others]) })
+      render(<App now={now} />)
+      const dialog = await openRoomA('10:00')
+
+      expect(within(dialog).getByText(/自分の別の予約と重なっています/)).toBeInTheDocument()
+      expect(within(dialog).getByText('会議室B 10:00〜11:00「営業定例」')).toBeInTheDocument()
+      await userEvent.click(within(dialog).getByRole('button', { name: '予約する' }))
+
+      expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/会議室B 10:00〜11:00「営業定例」[\s\S]*重ねて予約しますか？/))
+      await waitFor(() => expect(posts).toHaveLength(1))
+    })
+
+    it('確認で「キャンセル」を選ぶと、送らず、小窓も開いたまま', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false)
+      mockApi({ day: () => json([own, others]) })
+      render(<App now={now} />)
+      const dialog = await openRoomA('10:00')
+
+      await userEvent.click(within(dialog).getByRole('button', { name: '予約する' }))
+      expect(window.confirm).toHaveBeenCalledTimes(1)
+      expect(posts).toEqual([])
+      expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
+    })
+
+    it('接しているだけ（11:00 開始）・ほかの人の予約と重なるだけ（12:00）では、警告も確認も出ない', async () => {
+      mockApi({ day: () => json([own, others]) })
+      render(<App now={now} />)
+
+      let dialog = await openRoomA('11:00')
+      expect(within(dialog).queryByText(/自分の別の予約と重なっています/)).not.toBeInTheDocument()
+      await userEvent.click(within(dialog).getByRole('button', { name: 'やめる' }))
+
+      dialog = await openRoomA('12:00')
+      expect(within(dialog).queryByText(/自分の別の予約と重なっています/)).not.toBeInTheDocument()
+      await userEvent.click(within(dialog).getByRole('button', { name: '予約する' }))
+      expect(window.confirm).not.toHaveBeenCalled()
+      await waitFor(() => expect(posts).toHaveLength(1))
+    })
+
+    it('時間を動かすと、注意文が出たり消えたりする', async () => {
+      mockApi({ day: () => json([own]) })
+      render(<App now={now} />)
+      const dialog = await openRoomA('9:00')
+      expect(within(dialog).queryByText(/自分の別の予約と重なっています/)).not.toBeInTheDocument()
+
+      await userEvent.selectOptions(within(dialog).getByLabelText('終了'), '630') // 9:00〜10:30
+      expect(within(dialog).getByText(/会議室B 10:00〜11:00/)).toBeInTheDocument()
+      await userEvent.selectOptions(within(dialog).getByLabelText('終了'), '600') // 9:00〜10:00
+      expect(within(dialog).queryByText(/自分の別の予約と重なっています/)).not.toBeInTheDocument()
+    })
+
+    it('変更で会議室を変えても、元の予約自体とは重なり扱いにならない', async () => {
+      const mineA = reservation({ id: 102, roomId: 10, startAt: '2026-11-20T13:00:00+09:00', endAt: '2026-11-20T14:00:00+09:00', purpose: '資料づくり' })
+      mockApi({ day: () => json([mineA]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('資料づくり（田中）'))
+      await userEvent.click(within(screen.getByRole('dialog', { name: '予約の内容' })).getByRole('button', { name: '変更する' }))
+      const dialog = screen.getByRole('dialog', { name: '予約の変更' })
+      await userEvent.selectOptions(within(dialog).getByLabelText('会議室'), '11') // 同じ時間のまま、会議室 A → B
+      expect(within(dialog).queryByText(/自分の別の予約と重なっています/)).not.toBeInTheDocument()
+    })
+
+    it('変更: 元の予約自体とは比べず、自分の別の予約と重なるときだけ「重ねて変更しますか？」になる', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(false) // 保存せず、小窓を開いたまま確認の文だけ見る
+      const mineA = reservation({ id: 102, roomId: 10, startAt: '2026-11-20T13:00:00+09:00', endAt: '2026-11-20T14:00:00+09:00', purpose: '資料づくり' })
+      mockApi({ day: () => json([own, mineA]) })
+      render(<App now={now} />)
+
+      await userEvent.click(await screen.findByText('資料づくり（田中）'))
+      await userEvent.click(within(screen.getByRole('dialog', { name: '予約の内容' })).getByRole('button', { name: '変更する' }))
+      const dialog = screen.getByRole('dialog', { name: '予約の変更' })
+      expect(within(dialog).queryByText(/自分の別の予約と重なっています/)).not.toBeInTheDocument() // 元の予約自体は比べない
+      await userEvent.click(within(dialog).getByRole('button', { name: '変更を保存' }))
+      expect(window.confirm).toHaveBeenLastCalledWith('この内容で予約を変更しますか？')
+
+      await userEvent.selectOptions(within(dialog).getByLabelText('開始'), '600') // 10:00〜14:00 にして、会議室B の予約と重ねる
+      expect(within(dialog).getByText(/会議室B 10:00〜11:00/)).toBeInTheDocument()
+      await userEvent.click(within(dialog).getByRole('button', { name: '変更を保存' }))
+      expect(window.confirm).toHaveBeenLastCalledWith(expect.stringMatching(/重ねて変更しますか？$/))
+    })
+  })
+
   describe('予約の変更', () => {
     beforeEach(() => vi.spyOn(window, 'confirm').mockReturnValue(true))
     afterEach(() => vi.restoreAllMocks())

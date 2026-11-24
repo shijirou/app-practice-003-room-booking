@@ -43,6 +43,28 @@ export function validateForm(form: Form, { today, nowMinutes, existing }: Contex
   return null
 }
 
+/**
+ * 自分の、別の会議室の予約で、入力した時間と重なるもの（ダブルブッキングの警告用）。禁止ではなく、警告と確認だけにする（同時に押さえる使い方もあるため）。
+ * 接しているだけ（10:00 終了と 10:00 開始）は重ならない。同じ会議室の重なりは、上の検査（禁止）が扱う。
+ * 変更中の元の予約自体（editId）は比べない。まだ読み込んでいないときは空。
+ */
+export function selfOverlaps(
+  form: Form,
+  existing: Reservation[] | null,
+  selfId: number | null,
+  editId?: number,
+): Reservation[] {
+  if (selfId === null || existing === null) return []
+  return existing.filter(
+    (r) =>
+      r.employeeId === selfId &&
+      r.id !== editId &&
+      r.roomId !== form.roomId &&
+      minutesOf(r.startAt) < form.end &&
+      minutesOf(r.endAt) > form.start,
+  )
+}
+
 /** 空き枠を押したときの終了時刻。30 分（1 枠）。空き枠は押せるので、次の予約や閉館を越えない。 */
 export function defaultEnd(start: number): number {
   return Math.min(CLOSE, start + UNIT)

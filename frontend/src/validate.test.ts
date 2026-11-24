@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Reservation } from './api'
 import { isoOf } from './time'
-import { defaultEnd, firstFreeSlot, validateForm, type Form } from './validate'
+import { defaultEnd, firstFreeSlot, selfOverlaps, validateForm, type Form } from './validate'
 
 const form = (over: Partial<Form> = {}): Form => ({
   roomId: 10,
@@ -54,6 +54,26 @@ describe('validateForm（API と同じ決まり）', () => {
     expect(validateForm(form({ start: 9 * 60, end: 10 * 60 + 30 }), { ...context, existing })).toBeNull() // 隣り合う
     expect(validateForm(form({ roomId: 11 }), { ...context, existing })).toBeNull()
     expect(validateForm(form(), context)).toBeNull()
+  })
+})
+
+describe('selfOverlaps（自分の別の会議室の予約との重なり）', () => {
+  const mine = { ...reservation(11, '10:30', '11:30'), id: 5 } // 自分（社員 1）・会議室 11
+  const theirs = { ...reservation(11, '10:30', '11:30'), id: 6, employeeId: 2 }
+
+  it('自分の別の会議室の予約と時間が重なると返す', () => {
+    expect(selfOverlaps(form(), [mine], 1)).toEqual([mine])
+  })
+  it('接しているだけ・ほかの人の予約・同じ会議室・自分が不明・まだ読み込んでいないときは、返さない', () => {
+    expect(selfOverlaps(form({ end: 10 * 60 + 30 }), [mine], 1)).toEqual([]) // 10:00〜10:30 と 10:30〜 は接するだけ
+    expect(selfOverlaps(form(), [theirs], 1)).toEqual([])
+    expect(selfOverlaps(form({ roomId: 11 }), [mine], 1)).toEqual([]) // 同じ会議室は、別の検査（禁止）が扱う
+    expect(selfOverlaps(form(), [mine], null)).toEqual([])
+    expect(selfOverlaps(form(), null, 1)).toEqual([])
+  })
+  it('変更中の元の予約自体は比べない', () => {
+    expect(selfOverlaps(form(), [mine], 1, 5)).toEqual([])
+    expect(selfOverlaps(form(), [mine], 1, 99)).toEqual([mine]) // 別の予約を変更中なら比べる
   })
 })
 
