@@ -323,6 +323,24 @@ describe('App', () => {
     expect(screen.getByText('自分')).toBeInTheDocument() // 自分の予約にだけ付く目印
   })
 
+  it('自分の予約の一覧: 今日の予約にだけ ●（読み上げは「今日」）が付き、明日以降には付かない', async () => {
+    mockApi({
+      upcoming: () =>
+        json([
+          reservation({ id: 90, startAt: '2026-11-20T10:00:00+09:00', endAt: '2026-11-20T11:00:00+09:00', purpose: '今日の会議' }),
+          reservation({ id: 91, startAt: '2026-11-25T10:00:00+09:00', endAt: '2026-11-25T11:00:00+09:00', purpose: '研修' }),
+        ]),
+    })
+    render(<App now={now} />)
+
+    const todayCard = (await screen.findByText('会議室A ／ 今日の会議')).closest('.rcard') as HTMLElement
+    const laterCard = screen.getByText('会議室A ／ 研修').closest('.rcard') as HTMLElement
+    expect(within(todayCard).getByTestId('todaydot')).toHaveAttribute('aria-hidden', 'true')
+    expect(within(todayCard).getByText('今日', { selector: '.sr-only' })).toBeInTheDocument()
+    expect(within(laterCard).queryByTestId('todaydot')).not.toBeInTheDocument()
+    expect(within(laterCard).queryByText('今日')).not.toBeInTheDocument()
+  })
+
   describe('読み上げ・キーボード向けの目印（ARIA）', () => {
     it('タブ: 欄との対応の目印が付き、選んでいるタブだけ Tab で入れる', async () => {
       mockApi()
