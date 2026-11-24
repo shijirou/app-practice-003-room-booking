@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Calendar from "./Calendar";
 import {
   addDays,
@@ -43,10 +43,31 @@ export default function DateBar({
   useDismiss(calendarOpen, box, closeCalendar, true, ".lists button, .pop");
 
   const away = date !== today;
+
+  // 別の日を見ているとき、現在時刻の枠は「今日 11/20(金)」の分だけ右へ伸びる（黄色い枠）。
+  // ミニカレンダーの幅は、いつも「現在 ○:○○」だけの枠の右端に合わせる（伸びた分は、右の端から引く）。
+  // 横に伸びると、日付どうしの間が開くだけなので。
+  const nav = useRef<HTMLDivElement>(null);
+  const clock = useRef<HTMLSpanElement>(null);
+  const base = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const navEl = nav.current;
+    const clockEl = clock.current;
+    const baseEl = base.current;
+    if (!navEl || !clockEl || !baseEl) return;
+    const style = getComputedStyle(clockEl);
+    const baseRight =
+      baseEl.getBoundingClientRect().right +
+      parseFloat(style.paddingRight) +
+      parseFloat(style.borderRightWidth);
+    const extra = away ? navEl.getBoundingClientRect().right - baseRight : 0;
+    navEl.style.setProperty("--cal-trim", `${Math.max(0, extra)}px`);
+  }, [away, nowMinutes, date, today]);
+
   return (
     <div className="datebar">
       {/* 「◀ 今日 ▶ 日付 現在時刻」をまとめる。ミニカレンダーは、この枠の左右の端（◀ の左端〜現在時刻の右端）に合わせて開く */}
-      <div className="navgroup">
+      <div className="navgroup" ref={nav}>
         <button
           type="button"
           aria-label="前の日"
@@ -97,10 +118,9 @@ export default function DateBar({
               />
             )}
           </div>
-          <span className={`clock${away ? " away" : ""}`}>
-            {away
-              ? `現在 ${formatMinutes(nowMinutes)}　今日 ${formatShortDate(today)}`
-              : `現在 ${formatMinutes(nowMinutes)}`}
+          <span className={`clock${away ? " away" : ""}`} ref={clock}>
+            <span ref={base}>現在 {formatMinutes(nowMinutes)}</span>
+            {away && <span className="clock-extra">今日 {formatShortDate(today)}</span>}
           </span>
         </div>
       </div>

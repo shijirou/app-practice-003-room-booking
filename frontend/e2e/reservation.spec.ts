@@ -198,3 +198,20 @@ test('キーボードだけで予約できる（表の中を矢印キーで動�
   await expect(page.getByText('予約しました')).toBeVisible()
   await expect(rowOf(page, '会議室A').getByTestId('reservation')).toContainText('矢印キーで予約')
 })
+
+test('ミニカレンダーの幅は、今日でも今日以外でも変わらない（現在時刻の枠が伸びても、横に伸びない）', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /^20\d\d年/ }).click()
+  const calendar = page.getByRole('dialog', { name: 'カレンダー' })
+  const width = async () => (await calendar.boundingBox())?.width ?? 0
+  const clockWidth = async () => (await page.locator('.clock').boundingBox())?.width ?? 0
+
+  const onToday = await width()
+  const clockOnToday = await clockWidth()
+  await calendar.locator('.day:not(.today):not(.out)').nth(3).click() // 今日以外を選ぶ
+  await expect.poll(clockWidth).toBeGreaterThan(clockOnToday + 50) // 時刻の枠は「今日 ○/○」の分だけ伸びる（黄色い枠）
+
+  expect(Math.abs((await width()) - onToday)).toBeLessThan(2) // カレンダーは伸びない
+  await calendar.getByRole('button', { name: '次の月' }).click()
+  expect(Math.abs((await width()) - onToday)).toBeLessThan(2)
+})
