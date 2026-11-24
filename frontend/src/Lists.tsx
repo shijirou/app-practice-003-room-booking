@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import type { Reservation, Room } from './api'
 import { dateOf, formatMinutes, formatShortDate, isFinished, isStarted, minutesOf } from './time'
 import type { Loaded } from './useLoaded'
@@ -32,10 +32,23 @@ type Props = {
 
 type Tab = 'mine' | 'day'
 
+const TABS: Tab[] = ['mine', 'day']
+
 /** 下の欄。「自分の予約（今後）」と「その日のみんなの予約」をタブで切り替える。 */
 export default function Lists(props: Props) {
   const { rooms, selfName, date, upcoming, today, nowMinutes } = props
   const [tab, setTab] = useState<Tab>('mine')
+
+  // タブの切り替え（WAI-ARIA のタブの作法）: ← → で隣へ、Home・End で端へ。選んだタブにキーボードの位置も移す
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const i = TABS.indexOf(tab)
+    const next =
+      e.key === 'ArrowRight' ? TABS[(i + 1) % TABS.length] : e.key === 'ArrowLeft' ? TABS[(i + TABS.length - 1) % TABS.length] : e.key === 'Home' ? TABS[0] : e.key === 'End' ? TABS[TABS.length - 1] : null
+    if (next === null) return
+    e.preventDefault()
+    setTab(next)
+    document.getElementById(`tab-${next}`)?.focus()
+  }
 
   const roomName = (id: number) => rooms.find((r) => r.id === id)?.name ?? ''
   const purposeOf = (r: Reservation) => r.purpose ?? '（用件なし）'
@@ -53,7 +66,11 @@ export default function Lists(props: Props) {
         <button
           type="button"
           role="tab"
+          id="tab-mine"
           aria-selected={tab === 'mine'}
+          aria-controls="lists-panel"
+          tabIndex={tab === 'mine' ? 0 : -1}
+          onKeyDown={onTabKeyDown}
           className={`tab${tab === 'mine' ? ' on' : ''}`}
           onClick={() => setTab('mine')}
         >
@@ -62,7 +79,11 @@ export default function Lists(props: Props) {
         <button
           type="button"
           role="tab"
+          id="tab-day"
           aria-selected={tab === 'day'}
+          aria-controls="lists-panel"
+          tabIndex={tab === 'day' ? 0 : -1}
+          onKeyDown={onTabKeyDown}
           className={`tab${tab === 'day' ? ' on' : ''}`}
           onClick={() => setTab('day')}
         >
@@ -71,7 +92,7 @@ export default function Lists(props: Props) {
       </div>
 
       {tab === 'mine' && (
-        <div className="list" role="tabpanel">
+        <div className="list" role="tabpanel" id="lists-panel" aria-labelledby="tab-mine">
           {upcoming.status === 'loading' && <div className="empty">読み込み中…</div>}
           {upcoming.status === 'error' && (
             <div className="err" role="alert">
@@ -127,7 +148,7 @@ export default function Lists(props: Props) {
       )}
 
       {tab === 'day' && (
-        <div className="list" role="tabpanel">
+        <div className="list" role="tabpanel" id="lists-panel" aria-labelledby="tab-day">
           {props.day.status === 'loading' && <div className="empty">読み込み中…</div>}
           {props.day.status === 'error' && <div className="empty">{props.day.message}</div>}
           {props.day.status === 'ok' && dayList.length === 0 && (

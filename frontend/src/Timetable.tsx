@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-redundant-roles -- grid の中の td は、ブラウザでは自動で gridcell になるが、テスト環境（jsdom）は認識しないので、役割を明示している */
 import { useEffect, useRef, useState } from 'react'
 import type { Reservation, Room } from './api'
 import { CLOSE, OPEN, UNIT, earliestStart, formatMinutes, minutesOf } from './time'
@@ -248,7 +249,9 @@ export default function Timetable({
   return (
     <div className="gridwrap">
       <div className="gridinner" onMouseMove={onMove}>
-        <table className="timetable">
+        {/* 矢印キーで動く表は、table に grid 役割を付ける（WAI-ARIA の作法）。lint の警告は、この場合に当てはまらない */}
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role */}
+        <table className="timetable" role="grid" aria-label="会議室ごとの予約表（矢印キーで移動、Enter で予約）">
           <thead>
             <tr>
               <th className="room">会議室</th>
@@ -326,10 +329,12 @@ export default function Timetable({
           .join(' ')
         cells.push(
           <td
+            role="gridcell"
             key={`free-${cursor}`}
             className={classes}
             title={past ? '過去の時間は予約できません' : undefined}
             aria-label={`${formatMinutes(cursor)} ${past ? '過去' : '空き'}`}
+            aria-disabled={past ? true : undefined}
             data-testid={past ? 'past' : 'free'}
             tabIndex={past ? undefined : tabKey === `${roomId}:${start}` ? 0 : -1}
             onFocus={past ? undefined : () => setActive({ roomId, from: start })}
@@ -360,7 +365,7 @@ export default function Timetable({
       if (end <= start) return
       addFree(start)
       cells.push(
-        <td key="draft" className={drafted.invalid ? 'draft invalid' : 'draft'} colSpan={(end - start) / UNIT} data-testid="draft">
+        <td role="gridcell" key="draft" className={drafted.invalid ? 'draft invalid' : 'draft'} colSpan={(end - start) / UNIT} data-testid="draft">
           {formatMinutes(start)}〜{formatMinutes(end)} 予約中…
         </td>,
       )
@@ -387,10 +392,12 @@ export default function Timetable({
         .join(' ')
       cells.push(
         <td
+          role="gridcell"
           key={`rsv-${r.id}`}
           className={classes}
           colSpan={(end - start) / UNIT}
           title={`${formatMinutes(start)}〜${formatMinutes(end)} ${purpose}（${r.employeeName}）`}
+          aria-label={`${formatMinutes(start)}〜${formatMinutes(end)} ${purpose}（${r.employeeName}）${r.employeeId === selfId ? ' 自分の予約' : ''}`}
           data-testid="reservation"
           data-id={r.id}
           tabIndex={tabKey === `${roomId}:${start}` ? 0 : -1}
