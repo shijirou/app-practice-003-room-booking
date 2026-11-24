@@ -1,0 +1,26 @@
+# 依存部品の更新を、毎週 PR で知らせる（脆弱性の修正は、セキュリティ更新が別に即時で出す）。
+# マージはユーザーが行う。更新が来たら CI（check）が通ることを確かめてからマージする。
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # 開発用の部品（lint・テストなど）の更新は、1 つの PR にまとめる
+    groups:
+      dev-dependencies:
+        dependency-type: development
+  - package-ecosystem: gradle
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
