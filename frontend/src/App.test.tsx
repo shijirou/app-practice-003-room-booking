@@ -146,7 +146,8 @@ describe('App', () => {
     await waitFor(() => expect(screen.getAllByTestId('free')).toHaveLength(48))
     expect(screen.queryAllByTestId('past')).toHaveLength(0)
     expect(screen.queryByTestId('nowline')).not.toBeInTheDocument()
-    expect(screen.getByText(/現在 9:00\s+今日 11\/20\(金\)/)).toBeInTheDocument() // 別の日を見ているときは今日も出す
+    expect(screen.getByText('現在 9:00')).toBeInTheDocument()
+    expect(screen.getByText('今日 11/20(金)')).toBeInTheDocument() // 別の日を見ているときは今日も出す
   })
 
   it('前の日・今日のボタンで日付を動かし、その日の予約を取り直す', async () => {
