@@ -84,7 +84,7 @@ export default function Lists(props: Props) {
           aria-controls="lists-panel"
           tabIndex={tab === 'day' ? 0 : -1}
           onKeyDown={onTabKeyDown}
-          className={`tab${tab === 'day' ? ' on' : ''}`}
+          className={`tab all${tab === 'day' ? ' on' : ''}`}
           onClick={() => setTab('day')}
         >
           {formatShortDate(date)} の予約（みんな）{props.day.status === 'ok' ? `${dayList.length}件` : ''}
@@ -122,6 +122,14 @@ export default function Lists(props: Props) {
               >
                 <button type="button" className="rmain" onClick={() => props.onJump(r)}>
                   <span className="rtime">
+                    {dateOf(r.startAt) === today && (
+                      <>
+                        <span className="todaydot" aria-hidden="true" data-testid="todaydot">
+                          ●
+                        </span>
+                        <span className="sr-only">今日 </span>
+                      </>
+                    )}
                     {formatShortDate(dateOf(r.startAt))} {formatMinutes(minutesOf(r.startAt))}〜
                     {formatMinutes(minutesOf(r.endAt))}
                   </span>
