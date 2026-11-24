@@ -201,3 +201,38 @@ test('キーボードだけで予約できる（表の中を矢印キーで動�
   await expect(page.getByText('予約しました')).toBeVisible()
   await expect(rowOf(page, '会議室A').getByTestId('reservation')).toContainText('矢印キーで予約')
 })
+
+test('ミニカレンダーは、今日以外を選んで現在時刻の枠が伸びても、横に伸びない', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /^20\d\d年/ }).click()
+  const calendar = page.getByRole('dialog', { name: 'カレンダー' })
+
+  // 「現在 ○:○○」だけの枠の右端（枠の右の余白と線の分を足す）と、カレンダーの右端・幅
+  const measure = () =>
+    page.evaluate(() => {
+      const cal = document.querySelector('.cal')!.getBoundingClientRect()
+      const clock = document.querySelector('.clock')!
+      const style = getComputedStyle(clock)
+      const base = clock.firstElementChild!.getBoundingClientRect()
+      return {
+        calWidth: cal.width,
+        calRight: cal.right,
+        baseRight: base.right + parseFloat(style.paddingRight) + parseFloat(style.borderRightWidth),
+        clockWidth: clock.getBoundingClientRect().width,
+      }
+    })
+
+  const onToday = await measure()
+  expect(Math.abs(onToday.calRight - onToday.baseRight)).toBeLessThan(2)
+
+  await calendar.locator('.day:not(.today):not(.out)').nth(3).click() // 今日以外を選ぶ
+  await expect.poll(async () => (await measure()).clockWidth).toBeGreaterThan(onToday.clockWidth + 50) // 枠は「今日 ○/○」の分だけ伸びる（黄色い枠）
+
+  // カレンダーの右端は、伸びた枠ではなく、「現在 ○:○○」だけの枠の右端に合ったまま。幅も、伸びた分（50px 以上）は増えない
+  for (const step of ['選んだ直後', '翌月']) {
+    if (step === '翌月') await calendar.getByRole('button', { name: '次の月' }).click()
+    const away = await measure()
+    expect(Math.abs(away.calRight - away.baseRight), step).toBeLessThan(2)
+    expect(Math.abs(away.calWidth - onToday.calWidth), step).toBeLessThan(20)
+  }
+})
