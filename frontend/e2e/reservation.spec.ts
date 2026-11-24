@@ -55,6 +55,9 @@ async function openAs(page: Page, who: string) {
   await expect(page.getByTestId('free').first()).toBeVisible()
 }
 
+/** 画面内の確認ダイアログ（alertdialog）の中のボタンを押して、答える */
+const answer = (page: Page, name: string) => page.getByRole('alertdialog').getByRole('button', { name }).click()
+
 const rowOf = (page: Page, room: string) =>
   page.locator('tr').filter({ has: page.locator('th.room', { hasText: room }) })
 
@@ -81,26 +84,29 @@ test('予約 → 変更 → キャンセルを通しでできる', async ({ page
   const edit = page.getByRole('dialog', { name: '予約の変更' })
   await edit.getByLabel('終了').selectOption({ label: '11:00' })
   await expect(page.getByTestId('draft')).toContainText('10:00〜11:00')
-  page.once('dialog', (d) => void d.accept()) // 「この内容で予約を変更しますか？」
   await edit.getByRole('button', { name: '変更を保存' }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('この内容で予約を変更しますか？')
+  await answer(page, '変更する')
   await expect(page.getByText('予約を変更しました')).toBeVisible()
   await expect(mine).toHaveAttribute('data-to', String(11 * 60))
 
   // キャンセル: 確認で OK を押す
   await mine.click()
-  page.once('dialog', (d) => void d.accept())
   await page.getByRole('dialog', { name: '予約の内容' }).getByRole('button', { name: '予約をキャンセルする' }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('この予約をキャンセルしますか？')
+  await answer(page, '予約をキャンセルする')
   await expect(page.getByText('予約をキャンセルしました')).toBeVisible()
   await expect(rowOf(page, '会議室A').getByTestId('reservation')).toHaveCount(0)
 })
 
-test('キャンセルの確認で「キャンセル」を選ぶと、予約は残る', async ({ page, request }) => {
+test('キャンセルの確認で「戻る」を選ぶと、予約は残る', async ({ page, request }) => {
   await seed(request, '田中架空', '会議室B', '13:00', '14:00', '残る予約')
   await openAs(page, '田中架空')
 
   await rowOf(page, '会議室B').getByTestId('reservation').click()
-  page.once('dialog', (d) => void d.dismiss())
   await page.getByRole('dialog', { name: '予約の内容' }).getByRole('button', { name: '予約をキャンセルする' }).click()
+  await answer(page, '戻る')
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
   await expect(rowOf(page, '会議室B').getByTestId('reservation')).toHaveCount(1)
 })
 
@@ -149,19 +155,16 @@ test('自分の別の会議室の予約と重なると、注意文と確認が�
   await expect(warning).toContainText('この時間は、自分の別の予約と重なっています')
   await expect(warning).toContainText('会議室B 10:00〜11:00「営業定例」')
 
-  // 確認で「キャンセル」: 送らない
-  let message = ''
-  page.once('dialog', (d) => {
-    message = d.message()
-    void d.dismiss()
-  })
+  // 確認で「戻る」: 送らない
   await form.getByRole('button', { name: '予約する' }).click()
-  await expect.poll(() => message).toContain('重ねて予約しますか？')
+  await expect(page.getByRole('alertdialog')).toContainText('重ねて予約しますか？')
+  await answer(page, '戻る')
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
   await expect(page.locator('[data-testid="reservation"]')).toHaveCount(1)
 
-  // 確認で OK: 予約できる（禁止ではなく、警告と確認だけ）
-  page.once('dialog', (d) => void d.accept())
+  // 確認で「重ねて予約する」: 予約できる（禁止ではなく、警告と確認だけ）
   await form.getByRole('button', { name: '予約する' }).click()
+  await answer(page, '重ねて予約する')
   await expect(page.getByText('予約しました')).toBeVisible()
   await expect(page.locator('[data-testid="reservation"].mine')).toHaveCount(2)
 })

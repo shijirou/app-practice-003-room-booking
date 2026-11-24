@@ -10,13 +10,14 @@ import {
   fetchUpcoming,
   type Reservation,
 } from './api'
+import { useConfirm } from './useConfirm'
 import DateBar from './DateBar'
 import Legend from './Legend'
 import Lists from './Lists'
 import { placePopup, type Pos } from './placePopup'
 import { DetailPopup, ReservePopup } from './Popups'
 import Timetable from './Timetable'
-import { CLOSE, dateOf, earliestStart, formatMinutes, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
+import { CLOSE, dateOf, earliestStart, formatMinutes, formatShortDate, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
 import { errorMessage, useLoaded } from './useLoaded'
 import { defaultEnd, firstFreeSlot, validateForm, type Form } from './validate'
 
@@ -200,13 +201,27 @@ export default function App({ now = () => new Date() }: Props) {
 
   // キャンセルの通信中は、ほかのキャンセルを受け付けない（続けて押して 2 回送らない）
   const cancelling = useRef(false)
+  // 確認ダイアログ（キャンセル・変更・自分の別の予約との重なり）
+  const { ask, dialog: confirmDialog } = useConfirm()
 
   /**
    * ［キャンセル］［キャンセルする］を押した。確認で OK のときだけ消す。
    * 成功しても失敗しても、その予約の小窓は閉じて（古い内容で操作させない）、表を読み直す。失敗の理由はお知らせに出す。
    */
   const cancel = async (r: Reservation) => {
-    if (selfId === null || cancelling.current || !window.confirm('この予約をキャンセルしますか？')) return
+    if (selfId === null || cancelling.current) return
+    const roomName = base.status === 'ok' ? (base.data.rooms.find((room) => room.id === r.roomId)?.name ?? '') : ''
+    const ok = await ask({
+      title: 'この予約をキャンセルしますか？',
+      lines: [
+        `${formatShortDate(dateOf(r.startAt))} ${formatMinutes(minutesOf(r.startAt))}〜${formatMinutes(minutesOf(r.endAt))}`,
+        `${roomName}${r.purpose ? `「${r.purpose}」` : ''}`,
+      ],
+      note: 'キャンセルした予約は元に戻せません。',
+      confirmLabel: '予約をキャンセルする',
+      danger: true,
+    })
+    if (!ok || cancelling.current) return
     cancelling.current = true
     try {
       await cancelReservation(r.id, selfId)
@@ -401,6 +416,7 @@ export default function App({ now = () => new Date() }: Props) {
           editing={popup.editId !== undefined}
           selfId={selfId}
           editId={popup.editId}
+          ask={ask}
           onChange={changeForm}
           onClose={() => setPopup(null)}
           onSubmit={create}
@@ -426,6 +442,7 @@ export default function App({ now = () => new Date() }: Props) {
       {toast !== null && (
         <output className="toast">{toast}</output>
       )}
+      {confirmDialog}
     </div>
   )
 }
