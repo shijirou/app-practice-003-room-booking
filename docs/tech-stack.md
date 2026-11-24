@@ -22,6 +22,9 @@
 | TypeScript | 7.0.2 | 型チェック（`tsc --noEmit` を lint・ビルド・CI に入れる） |
 | oxlint | 1.94.0 | コードの書き方チェック（lint） |
 | Vitest / @vitest/coverage-v8 | 5.1.1 | 自動テストと網羅率 |
+| @playwright/test | 1.65.1 | E2E テスト（ブラウザ Chromium を自動で動かす） |
+| pg | 8.23.1 | E2E テストの使い捨て DB を作る・消す（テスト専用） |
+| @types/node | 26.6.6 | E2E の設定ファイルの型（テスト専用） |
 | jsdom | 31.0.1 | テストの中でブラウザの代わりをする |
 | @testing-library/react | 16.3.3 | テストで画面を表示して操作する |
 | @testing-library/user-event | 14.6.13 | テストで人の操作を再現する |
@@ -48,7 +51,6 @@
 |---|---|---|
 | Git | 2.55.0 | 変更の記録 |
 | GitHub CLI（gh） | 2.100.0 | Issue・PR の作成 |
-| @playwright/test | 1.65.1 | E2E テスト（あとで追加） |
 
 ## ポート
 画面 5173、API 8080、DB 5432（固定。[CLAUDE.md](../CLAUDE.md) 参照）。

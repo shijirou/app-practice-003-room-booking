@@ -18,3 +18,7 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Playwright（E2E テスト）の出力
+test-results/
+playwright-report/
