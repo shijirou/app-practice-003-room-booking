@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    // e2e/ は Playwright（ブラウザの通しテスト）が動かす。Vitest では動かさない
+    exclude: ['e2e/**', 'node_modules/**'],
     setupFiles: './src/test-setup.ts',
     // 1テストごとに、spyOn などの差し替えを元に戻す
     restoreMocks: true,
