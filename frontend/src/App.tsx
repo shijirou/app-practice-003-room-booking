@@ -399,6 +399,8 @@ export default function App({ now = () => new Date() }: Props) {
           nowMinutes={nowMinutes}
           existing={popup.form.date === date ? dayReservations : null}
           editing={popup.editId !== undefined}
+          selfId={selfId}
+          editId={popup.editId}
           onChange={changeForm}
           onClose={() => setPopup(null)}
           onSubmit={create}

@@ -139,6 +139,33 @@ test('ほかの人の予約には、変更・キャンセルのボタンが出�
   await expect(page.getByRole('dialog', { name: '予約の内容' }).getByRole('button', { name: '変更する' })).toBeVisible()
 })
 
+test('自分の別の会議室の予約と重なると、注意文と確認が出る（同じ会議室の重複は 409 のまま）', async ({ page, request }) => {
+  await seed(request, '田中架空', '会議室B', '10:00', '11:00', '営業定例')
+  await openAs(page, '田中架空')
+
+  await rowOf(page, '会議室A').getByLabel('10:00 空き').click()
+  const form = page.getByRole('dialog', { name: '予約', exact: true })
+  const warning = form.getByRole('status')
+  await expect(warning).toContainText('この時間は、自分の別の予約と重なっています')
+  await expect(warning).toContainText('会議室B 10:00〜11:00「営業定例」')
+
+  // 確認で「キャンセル」: 送らない
+  let message = ''
+  page.once('dialog', (d) => {
+    message = d.message()
+    void d.dismiss()
+  })
+  await form.getByRole('button', { name: '予約する' }).click()
+  await expect.poll(() => message).toContain('重ねて予約しますか？')
+  await expect(page.locator('[data-testid="reservation"]')).toHaveCount(1)
+
+  // 確認で OK: 予約できる（禁止ではなく、警告と確認だけ）
+  page.once('dialog', (d) => void d.accept())
+  await form.getByRole('button', { name: '予約する' }).click()
+  await expect(page.getByText('予約しました')).toBeVisible()
+  await expect(page.locator('[data-testid="reservation"].mine')).toHaveCount(2)
+})
+
 test('キーボードだけで予約できる（［＋ 予約する］ボタン）', async ({ page }) => {
   await openAs(page, '田中架空')
 

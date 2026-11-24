@@ -5,7 +5,7 @@ import { CLOSE, OPEN, UNIT, dateOf, formatDateLabel, formatMinutes, isStarted, m
 import type { Pos } from './placePopup'
 import TimeSelect from './TimeSelect'
 import { useDismiss } from './useDismiss'
-import { validateForm, type Form } from './validate'
+import { selfOverlaps, validateForm, type Form } from './validate'
 
 const options = (from: number, to: number) => {
   const list = []
@@ -23,6 +23,9 @@ type ReserveProps = {
   existing: Reservation[] | null
   /** 予約の変更か（見出し・ボタンの文が変わる） */
   editing: boolean
+  /** 操作している社員と、変更中の予約の番号（自分の別の予約との重なりの警告用） */
+  selfId: number | null
+  editId?: number
   onChange: (form: Form) => void
   onClose: () => void
   /** 予約を作る。失敗したら例外を投げる（メッセージを小窓に出す） */
@@ -34,7 +37,7 @@ type ReserveProps = {
 }
 
 /** 予約する小窓。入力のたびに、表へ仮表示が出る（form は親が持つ）。 */
-export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, focusFirst, onPreview, onChange, onClose, onSubmit }: ReserveProps) {
+export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, selfId, editId, focusFirst, onPreview, onChange, onClose, onSubmit }: ReserveProps) {
   const box = useRef<HTMLDialogElement>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -46,6 +49,11 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
 
   // 時刻を選ぶと送れなくなる（4 時間を超える・過去・重なりなど）かを、送るときと同じ検査で調べる。リストで赤く表示する
   const invalidWith = (next: Form) => validateForm(next, { today, nowMinutes, existing }) !== null
+  // 自分の別の会議室の予約と重なっているか（禁止ではなく警告と確認）
+  const overlaps = selfOverlaps(form, existing, selfId, editId)
+  const overlapOf = (r: Reservation) =>
+    `${rooms.find((room) => room.id === r.roomId)?.name ?? ''} ${formatMinutes(minutesOf(r.startAt))}〜${formatMinutes(minutesOf(r.endAt))}${r.purpose ? `「${r.purpose}」` : ''}`
+  const overlapText = overlaps.map(overlapOf).join('、')
   const startMoved = (start: number): Form => ({ ...form, start, end: form.end > start ? form.end : Math.min(start + 60, CLOSE) })
 
   const setStart = (start: number) => {
@@ -60,7 +68,17 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
     setError(message ?? '')
     if (message) return
     // 変更は、保存する前に確認する（入力の検査を通ったあと。「キャンセル」なら小窓はそのまま）
-    if (editing && !window.confirm('この内容で予約を変更しますか？')) return
+    // （自分の別の予約と重なっているときは、その旨も同じ確認に入れる）
+    if (editing || overlaps.length > 0) {
+      const overlapLine = overlaps.length > 0 ? `自分の別の予約と時間が重なっています（${overlapText}）。
+
+` : ''
+      const hasOverlap = overlaps.length > 0
+      const question = editing
+        ? hasOverlap ? '重ねて変更しますか？' : 'この内容で予約を変更しますか？'
+        : '重ねて予約しますか？'
+      if (!window.confirm(overlapLine + question)) return
+    }
     setBusy(true)
     try {
       await onSubmit(form)
@@ -83,6 +101,14 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
           <div className="err" role="alert">
             {error}
           </div>
+        )}
+        {overlaps.length > 0 && (
+          <output className="warn">
+            <strong>この時間は、自分の別の予約と重なっています</strong>
+            {overlaps.map((r) => (
+              <span key={r.id}>{overlapOf(r)}</span>
+            ))}
+          </output>
         )}
         <div className="prow">
           <label htmlFor="p_room">会議室</label>
