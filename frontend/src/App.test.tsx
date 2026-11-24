@@ -234,11 +234,11 @@ describe('App', () => {
     fireEvent.mouseEnter(wrap)
     expect(calendar).not.toHaveClass('faded') // 重ねると元の濃さ
 
-    await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0]) // 外を押す
+    await userEvent.click(screen.getAllByRole('gridcell', { name: '10:00 空き' })[0]) // 外を押す
     expect(screen.queryByRole('dialog', { name: 'カレンダー' })).not.toBeInTheDocument() // 閉じる
     expect(screen.queryByRole('dialog', { name: '予約' })).not.toBeInTheDocument() // 表の枠は反応しない
 
-    await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0]) // 閉じたあとは、ふつうに押せる
+    await userEvent.click(screen.getAllByRole('gridcell', { name: '10:00 空き' })[0]) // 閉じたあとは、ふつうに押せる
     expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
   })
 
@@ -323,6 +323,65 @@ describe('App', () => {
     expect(screen.getByText('自分')).toBeInTheDocument() // 自分の予約にだけ付く目印
   })
 
+  describe('読み上げ・キーボード向けの目印（ARIA）', () => {
+    it('タブ: 欄との対応の目印が付き、選んでいるタブだけ Tab で入れる', async () => {
+      mockApi()
+      render(<App now={now} />)
+      const mineTab = await screen.findByRole('tab', { name: /^自分（田中架空）の予約/ })
+      const dayTab = screen.getByRole('tab', { name: /の予約（みんな）/ })
+
+      const panel = screen.getByRole('tabpanel')
+      expect(mineTab).toHaveAttribute('aria-controls', panel.id)
+      expect(panel).toHaveAttribute('aria-labelledby', mineTab.id)
+      expect(mineTab).toHaveAttribute('tabindex', '0')
+      expect(dayTab).toHaveAttribute('tabindex', '-1')
+
+      await userEvent.click(dayTab)
+      expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', dayTab.id)
+      expect(dayTab).toHaveAttribute('tabindex', '0')
+      expect(mineTab).toHaveAttribute('tabindex', '-1')
+    })
+
+    it('タブ: ← → Home End で切り替わり、キーボードの位置もついていく', async () => {
+      mockApi()
+      render(<App now={now} />)
+      const mineTab = await screen.findByRole('tab', { name: /^自分（田中架空）の予約/ })
+      const dayTab = screen.getByRole('tab', { name: /の予約（みんな）/ })
+
+      mineTab.focus()
+      await userEvent.keyboard('{ArrowRight}')
+      expect(dayTab).toHaveAttribute('aria-selected', 'true')
+      expect(dayTab).toHaveFocus()
+      await userEvent.keyboard('{ArrowRight}') // 端から先頭へ回る
+      expect(mineTab).toHaveAttribute('aria-selected', 'true')
+      expect(mineTab).toHaveFocus()
+      await userEvent.keyboard('{ArrowLeft}') // 先頭から末尾へ回る
+      expect(dayTab).toHaveFocus()
+      await userEvent.keyboard('{Home}')
+      expect(mineTab).toHaveFocus()
+      await userEvent.keyboard('{End}')
+      expect(dayTab).toHaveFocus()
+    })
+
+    it('予約表: grid 役割と名前があり、予約済みのマスは時間・用件・予約した人で読み上げられる', async () => {
+      mockApi({
+        day: () =>
+          json([
+            reservation({}),
+            reservation({ id: 101, roomId: 11, employeeId: 2, employeeName: '佐藤架空', startAt: '2026-11-20T13:00:00+09:00', endAt: '2026-11-20T14:00:00+09:00', purpose: '商談' }),
+          ]),
+      })
+      render(<App now={now} />)
+      expect(await screen.findByRole('grid', { name: /会議室ごとの予約表/ })).toBeInTheDocument()
+
+      expect(await screen.findByRole('gridcell', { name: /商談（佐藤架空）$/ })).toBeInTheDocument()
+      expect(screen.getByRole('gridcell', { name: /（田中架空） 自分の予約$/ })).toBeInTheDocument()
+      // 過去のマスは「操作できない」と伝わる
+      expect(screen.getAllByRole('gridcell', { name: '8:00 過去' })[0]).toHaveAttribute('aria-disabled', 'true')
+      expect(screen.getAllByRole('gridcell', { name: '12:00 空き' })[0]).not.toHaveAttribute('aria-disabled')
+    })
+  })
+
   it('自分の予約のカードを押すと、その日にジャンプする', async () => {
     const calls = mockApi({
       upcoming: () =>
@@ -393,7 +452,7 @@ describe('App', () => {
 
   describe('予約する', () => {
     /** 会議室 A の、指定した時刻の空き枠 */
-    const freeCell = (time: string) => screen.getAllByRole('cell', { name: time + ' 空き' })[0]
+    const freeCell = (time: string) => screen.getAllByRole('gridcell', { name: time + ' 空き' })[0]
 
     it('空き枠を押すと 30 分の小窓が開き、仮表示が出て、予約すると送って表を取り直し、お知らせを出す', async () => {
       let created = false
@@ -528,7 +587,7 @@ describe('App', () => {
       render(<App now={now} />)
       await screen.findByText('会議室A（4名）')
 
-      await userEvent.click(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
+      await userEvent.click(screen.getAllByRole('gridcell', { name: '8:00 過去' })[0])
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
 
@@ -577,7 +636,7 @@ describe('App', () => {
       // 画面のない試験環境では枠の位置が取れないので、会議室 A の 12:00 の枠が x=100〜150 にあることにする
       vi.spyOn(freeCell('12:00'), 'getBoundingClientRect').mockReturnValue({ left: 100, right: 150 } as DOMRect)
       fireEvent.mouseDown(freeCell('10:00'))
-      fireEvent.mouseMove(screen.getAllByRole('cell', { name: '12:00 空き' })[1], { clientX: 120 }) // 会議室 B の上
+      fireEvent.mouseMove(screen.getAllByRole('gridcell', { name: '12:00 空き' })[1], { clientX: 120 }) // 会議室 B の上
       expect(freeCell('11:00')).toHaveClass('sel')
       expect(freeCell('12:00')).toHaveClass('sel')
       expect(freeCell('12:30')).not.toHaveClass('sel')
@@ -607,8 +666,8 @@ describe('App', () => {
       await screen.findByText('会議室A（4名）')
 
       fireEvent.mouseDown(freeCell('10:00'))
-      fireEvent.mouseMove(screen.getAllByRole('cell', { name: '12:00 空き' })[1]) // 会議室 B
-      fireEvent.mouseMove(screen.getAllByRole('cell', { name: '8:00 過去' })[0])
+      fireEvent.mouseMove(screen.getAllByRole('gridcell', { name: '12:00 空き' })[1]) // 会議室 B
+      fireEvent.mouseMove(screen.getAllByRole('gridcell', { name: '8:00 過去' })[0])
       fireEvent.mouseUp(document)
       const dialog = screen.getByRole('dialog', { name: '予約' })
       expect(within(dialog).getByLabelText('終了')).toHaveValue('630') // 押しただけと同じ 10:00〜10:30
@@ -707,7 +766,7 @@ describe('App', () => {
       mockApi()
       render(<App now={now} />)
       await screen.findByText('会議室A（4名）')
-      await userEvent.click(screen.getAllByRole('cell', { name: '10:00 空き' })[0])
+      await userEvent.click(screen.getAllByRole('gridcell', { name: '10:00 空き' })[0])
       return screen.getByRole('dialog', { name: '予約' })
     }
     const item = (name: string) => screen.getByRole('button', { name, hidden: true })
@@ -837,7 +896,7 @@ describe('App', () => {
       await userEvent.click(within(dialog).getByRole('button', { name: '閉じる' }))
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
-      await userEvent.click(screen.getAllByRole('cell', { name: '13:00 空き' })[0])
+      await userEvent.click(screen.getAllByRole('gridcell', { name: '13:00 空き' })[0])
       expect(screen.getByText('13:00〜13:30 予約中…')).toBeInTheDocument()
     })
   })
@@ -849,7 +908,7 @@ describe('App', () => {
       render(<App now={now} />)
       await screen.findByText('営業定例（田中）')
     }
-    const cell = (label: string, room = 0) => screen.getAllByRole('cell', { name: label })[room]
+    const cell = (label: string, room = 0) => screen.getAllByRole('gridcell', { name: label })[room]
     const focus = (el: HTMLElement) => act(() => el.focus())
 
     it('表の中で Tab が止まるのは 1 か所（最初の会議室の、予約できる最初の枠）。過去の枠は止まらない', async () => {
@@ -1156,7 +1215,7 @@ describe('App', () => {
       await userEvent.click(screen.getByRole('button', { name: '変更する' }))
       expect(screen.getByRole('dialog', { name: '予約の変更' })).toBeInTheDocument()
 
-      await userEvent.click(screen.getAllByRole('cell', { name: '13:00 空き' })[0])
+      await userEvent.click(screen.getAllByRole('gridcell', { name: '13:00 空き' })[0])
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument() // 閉じるだけ。予約する小窓は開かない
       expect(puts).toEqual([])
     })
