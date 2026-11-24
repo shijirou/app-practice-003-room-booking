@@ -4,6 +4,7 @@ import type { Reservation, Room } from './api'
 import { CLOSE, OPEN, UNIT, dateOf, formatDateLabel, formatMinutes, isStarted, minutesOf } from './time'
 import type { Pos } from './placePopup'
 import TimeSelect from './TimeSelect'
+import type { ConfirmRequest } from './ConfirmDialog'
 import { useDismiss } from './useDismiss'
 import { selfOverlaps, validateForm, type Form } from './validate'
 
@@ -26,6 +27,8 @@ type ReserveProps = {
   /** 操作している社員と、変更中の予約の番号（自分の別の予約との重なりの警告用） */
   selfId: number | null
   editId?: number
+  /** 確認ダイアログを出して、答え（true: 実行）を待つ */
+  ask: (request: ConfirmRequest) => Promise<boolean>
   onChange: (form: Form) => void
   onClose: () => void
   /** 予約を作る。失敗したら例外を投げる（メッセージを小窓に出す） */
@@ -37,12 +40,12 @@ type ReserveProps = {
 }
 
 /** 予約する小窓。入力のたびに、表へ仮表示が出る（form は親が持つ）。 */
-export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, selfId, editId, focusFirst, onPreview, onChange, onClose, onSubmit }: ReserveProps) {
+export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, editing, selfId, editId, ask, focusFirst, onPreview, onChange, onClose, onSubmit }: ReserveProps) {
   const box = useRef<HTMLDialogElement>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   // 変更中は、閉じるために外側を押しても、その操作を下の表やボタンに通さない（押した枠を選んでしまわない）
-  useDismiss(true, box, onClose, editing)
+  useDismiss(true, box, onClose, editing, '.confirm')
   useEffect(() => {
     if (focusFirst) box.current?.querySelector<HTMLElement>('#p_room')?.focus()
   }, [focusFirst])
@@ -53,12 +56,33 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
   const overlaps = selfOverlaps(form, existing, selfId, editId)
   const overlapOf = (r: Reservation) =>
     `${rooms.find((room) => room.id === r.roomId)?.name ?? ''} ${formatMinutes(minutesOf(r.startAt))}〜${formatMinutes(minutesOf(r.endAt))}${r.purpose ? `「${r.purpose}」` : ''}`
-  const overlapText = overlaps.map(overlapOf).join('、')
   const startMoved = (start: number): Form => ({ ...form, start, end: form.end > start ? form.end : Math.min(start + 60, CLOSE) })
 
   const setStart = (start: number) => {
     const end = form.end > start ? form.end : Math.min(start + 60, CLOSE)
     onChange({ ...form, start, end })
+  }
+
+  /** 送る前の確認の内容。重なりがあれば重なりの確認、なければ変更の確認 */
+  const confirmRequest = (): ConfirmRequest => {
+    if (overlaps.length > 0) {
+      return {
+        title: '自分の別の予約と時間が重なっています',
+        lines: overlaps.map(overlapOf),
+        note: editing ? '重ねて変更しますか？' : '重ねて予約しますか？',
+        confirmLabel: editing ? '重ねて変更する' : '重ねて予約する',
+      }
+    }
+    const roomName = rooms.find((room) => room.id === form.roomId)?.name ?? ''
+    const purpose = form.purpose.trim()
+    return {
+      title: 'この内容で予約を変更しますか？',
+      lines: [
+        `${formatDateLabel(form.date)} ${formatMinutes(form.start)}〜${formatMinutes(form.end)}`,
+        `${roomName}${purpose ? `「${purpose}」` : ''}`,
+      ],
+      confirmLabel: '変更する',
+    }
   }
 
   const submit = async (e: FormEvent) => {
@@ -67,17 +91,15 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
     const message = validateForm(form, { today, nowMinutes, existing })
     setError(message ?? '')
     if (message) return
-    // 変更は、保存する前に確認する（入力の検査を通ったあと。「キャンセル」なら小窓はそのまま）
-    // （自分の別の予約と重なっているときは、その旨も同じ確認に入れる）
+    // 変更は、保存する前に確認する（入力の検査を通ったあと。「戻る」なら小窓はそのまま）。
+    // 自分の別の予約と重なっているときは、作る場合も確認する（禁止ではない）
     if (editing || overlaps.length > 0) {
-      const overlapLine = overlaps.length > 0 ? `自分の別の予約と時間が重なっています（${overlapText}）。
-
-` : ''
-      const hasOverlap = overlaps.length > 0
-      const question = editing
-        ? hasOverlap ? '重ねて変更しますか？' : 'この内容で予約を変更しますか？'
-        : '重ねて予約しますか？'
-      if (!window.confirm(overlapLine + question)) return
+      setBusy(true) // 確認の答えを待つ間に、続けて押して 2 回送らない
+      const ok = await ask(confirmRequest())
+      if (!ok) {
+        setBusy(false)
+        return
+      }
     }
     setBusy(true)
     try {
@@ -190,7 +212,7 @@ type DetailProps = {
 export function DetailPopup({ reservation: r, rooms, selfId, pos, today, nowMinutes, onEdit, onCancel, focusFirst, onClose }: DetailProps) {
   const box = useRef<HTMLDialogElement>(null)
   // 予約の枠・カードを押したときは、その押した操作（開く・同じ予約なら閉じる）に任せる
-  useDismiss(true, box, onClose, false, '.rcard, td[data-id]')
+  useDismiss(true, box, onClose, false, '.rcard, td[data-id], .confirm')
   useEffect(() => {
     if (!focusFirst || !box.current) return
     // 主なボタン（変更する）。なければ最初のボタン、それもなければ「×」
