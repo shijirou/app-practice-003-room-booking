@@ -34,7 +34,7 @@ const json = (body: unknown, status = 200) =>
 
 type Options = {
   /** 日付ごとの予約の返事 */
-  day?: (date: string) => Response
+  day?: (date: string) => Response | Promise<Response>
   /** 社員ごとの「今後の予約」の返事 */
   upcoming?: (employeeId: string) => Response
   /** カレンダーの点（予約がある日）の返事 */
@@ -448,6 +448,41 @@ describe('App', () => {
     cardRect.mockReturnValue({ top: 150, bottom: 200 } as DOMRect)
     await userEvent.hover(screen.getByText('営業定例（田中）'))
     expect(list.scrollTop).toBe(0)
+  })
+
+  it('通信が遅くても、表に枠が出てから光る（光る時間が、表に出る前に終わらない）', async () => {
+    let release: (r: Response) => void = () => {}
+    const slow = new Promise<Response>((resolve) => {
+      release = resolve
+    })
+    const target = reservation({ id: 91, startAt: '2026-11-25T10:00:00+09:00', endAt: '2026-11-25T11:00:00+09:00', purpose: '研修' })
+    mockApi({
+      upcoming: () => json([target]),
+      day: (date) => (date === '2026-11-25' ? slow : json([])), // 11/25 の予約の読み込みだけ遅らせる
+    })
+    window.scrollTo = vi.fn()
+    render(<App now={now} />)
+    await userEvent.click(await screen.findByText('会議室A ／ 研修'))
+    expect(screen.getByText('2026年11月25日（水）')).toBeInTheDocument()
+
+    // 光る時間（1.5 秒）より長く待っても、まだ読み込み中なので、枠は無い。そのあと読み込みが終わる
+    await new Promise((resolve) => setTimeout(resolve, 1700))
+    release(json([target]))
+    const cell = await screen.findByRole('gridcell', { name: /研修/ })
+    expect(cell).toHaveClass('flash') // 光る時間を、表に出る前に使い切っていない
+  })
+
+  it('カレンダーを開いたまま、キーボードで日付を進めて月をまたぐと、カレンダーの月も変わる', async () => {
+    mockApi()
+    render(<App now={now} />)
+    await userEvent.click(await screen.findByRole('button', { name: /^2026年11月20日/ }))
+    const calendar = screen.getByRole('dialog', { name: 'カレンダー' })
+    expect(within(calendar).getByText('2026年11月')).toBeInTheDocument()
+
+    screen.getByRole('button', { name: '次の日' }).focus()
+    await userEvent.keyboard('{Enter>11/}') // 11/20 から 11 日進めて 12/1
+    expect(screen.getByRole('button', { name: /^2026年12月1日/ })).toBeInTheDocument()
+    expect(within(calendar).getByText('2026年12月')).toBeInTheDocument()
   })
 
   it('読み込みに失敗したらメッセージを出し、押すとやり直す', async () => {

@@ -42,6 +42,8 @@ async function fetchUpcomingOf(employeeId: number | null) {
 
 const CLOCK_INTERVAL_MS = 30_000
 const FLASH_MS = 1500
+/** 光らせる予約が表に出ないまま、光らせる対象を覚えておく上限（読み込みの失敗などで、あとから突然光らないように） */
+const FLASH_GIVE_UP_MS = 15000
 const TOAST_MS = 2500
 
 /** お知らせの見た目。赤くなったマスの位置（near）があれば、そのマスの上（上が狭ければ下）に出す。左右は画面の中に収める */
@@ -101,11 +103,19 @@ export default function App({ now = () => new Date() }: Props) {
   const selfId = chosenId ?? (base.status === 'ok' ? (base.data.employees[0]?.id ?? null) : null)
   const upcoming = useLoaded(fetchUpcomingOf, selfId, retry + reload)
 
+  // 光る時間（FLASH_MS）は、その予約の枠が表に出てから数える。通信が遅いと、表に出る前に終わってしまうため。
+  // 出ないままのときのために、上限（FLASH_GIVE_UP_MS）だけ置いておく
   const flash = (id: number) => {
     setFlashId(id)
     if (flashTimer.current !== null) clearTimeout(flashTimer.current)
-    flashTimer.current = setTimeout(() => setFlashId(null), FLASH_MS)
+    flashTimer.current = setTimeout(() => setFlashId(null), FLASH_GIVE_UP_MS)
   }
+  const flashShown = reservations.status === 'ok' && reservations.data.some((r) => r.id === flashId)
+  useEffect(() => {
+    if (!flashShown) return
+    if (flashTimer.current !== null) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlashId(null), FLASH_MS)
+  }, [flashShown, flashId])
 
   const showToast = (message: string, near?: DOMRect) => {
     setToast({ message, near })
