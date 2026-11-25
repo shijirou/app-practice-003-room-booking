@@ -738,6 +738,29 @@ describe('App', () => {
     })
   })
 
+  describe('予約枠の文字（短い枠は名前だけ）', () => {
+    it('30 分・60 分の枠は名前の最初の 2 文字だけ、90 分以上は「用件（名前）」。全文は title と読み上げ名に残る', async () => {
+      mockApi({
+        day: () =>
+          json([
+            reservation({ id: 1, roomId: 10, purpose: '朝会', startAt: '2026-11-20T09:30:00+09:00', endAt: '2026-11-20T10:00:00+09:00' }), // 30 分
+            reservation({ id: 2, roomId: 11, purpose: '面談', employeeId: 2, employeeName: '山田架空タロウ', startAt: '2026-11-20T10:00:00+09:00', endAt: '2026-11-20T11:00:00+09:00' }), // 60 分（長い名前）
+            reservation({ id: 3, roomId: 10, purpose: '営業定例', startAt: '2026-11-20T13:00:00+09:00', endAt: '2026-11-20T14:30:00+09:00' }), // 90 分
+          ]),
+      })
+      render(<App now={now} />)
+      const long = await screen.findByText('営業定例（田中）')
+      expect(long).not.toHaveClass('short')
+
+      const [thirty, sixty] = [screen.getByRole('gridcell', { name: /朝会/ }), screen.getByRole('gridcell', { name: /面談/ })]
+      expect(thirty).toHaveTextContent(/^田中$/)
+      expect(thirty).toHaveClass('short')
+      expect(sixty).toHaveTextContent(/^山田$/) // 長い名前は最初の 2 文字
+      expect(thirty).toHaveAttribute('title', '9:30〜10:00 朝会（田中架空）')
+      expect(sixty).toHaveAccessibleName('10:00〜11:00 面談（山田架空タロウ）')
+    })
+  })
+
   describe('予約の内容の開け閉め', () => {
     it('同じ「みんな」のカードをもう一度押すと、予約の内容が閉じる', async () => {
       mockApi({ day: () => json([reservation({ employeeId: 2, employeeName: '佐藤架空', purpose: '商談' })]) })
@@ -805,7 +828,7 @@ describe('App', () => {
       })
       render(<App now={now} />)
 
-      await userEvent.click(await screen.findByText('朝会（田中）'))
+      await userEvent.click(await screen.findByRole('gridcell', { name: /朝会/ }))
       expect(screen.getByText('始まった予約は変更・キャンセルできません。')).toBeInTheDocument()
 
       await userEvent.click(screen.getByText('営業定例（田中）'))
@@ -1250,7 +1273,7 @@ describe('App', () => {
       mockApi({ day: () => json([mineA]) })
       render(<App now={now} />)
 
-      await userEvent.click(await screen.findByText('資料づくり（田中）'))
+      await userEvent.click(await screen.findByRole('gridcell', { name: /資料づくり/ }))
       await userEvent.click(within(screen.getByRole('dialog', { name: '予約の内容' })).getByRole('button', { name: '変更する' }))
       const dialog = screen.getByRole('dialog', { name: '予約の変更' })
       await userEvent.selectOptions(within(dialog).getByLabelText('会議室'), '11') // 同じ時間のまま、会議室 A → B
@@ -1262,7 +1285,7 @@ describe('App', () => {
       mockApi({ day: () => json([own, mineA]) })
       render(<App now={now} />)
 
-      await userEvent.click(await screen.findByText('資料づくり（田中）'))
+      await userEvent.click(await screen.findByRole('gridcell', { name: /資料づくり/ }))
       await userEvent.click(within(screen.getByRole('dialog', { name: '予約の内容' })).getByRole('button', { name: '変更する' }))
       const dialog = screen.getByRole('dialog', { name: '予約の変更' })
       expect(within(dialog).queryByText(/自分の別の予約と重なっています/)).not.toBeInTheDocument() // 元の予約自体は比べない
@@ -1435,7 +1458,7 @@ describe('App', () => {
       })
       render(<App now={now} />)
 
-      await userEvent.click(await screen.findByText('朝会（田中）'))
+      await userEvent.click(await screen.findByRole('gridcell', { name: /朝会/ }))
       expect(screen.queryByRole('button', { name: '変更する' })).not.toBeInTheDocument()
       await userEvent.click(screen.getByText('商談（佐藤）'))
       expect(screen.queryByRole('button', { name: '変更する' })).not.toBeInTheDocument()
@@ -1630,7 +1653,7 @@ describe('App', () => {
       })
       render(<App now={now} />)
 
-      await userEvent.click(await screen.findByText('朝会（田中）'))
+      await userEvent.click(await screen.findByRole('gridcell', { name: /朝会/ }))
       expect(screen.queryByRole('button', { name: '予約をキャンセルする' })).not.toBeInTheDocument()
       await userEvent.click(screen.getByText('商談（佐藤）'))
       expect(screen.queryByRole('button', { name: '予約をキャンセルする' })).not.toBeInTheDocument()
