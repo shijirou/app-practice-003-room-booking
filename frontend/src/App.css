@@ -447,7 +447,9 @@ header.top {
   background: #f3f5f7;
   color: var(--sub);
   font-weight: normal;
-  padding: 0 6px;
+  /* 左右の余白は 0。最後の見出しは「19:00」と「20:00」の 2 つが入り、余白があると、画面幅 1024px（見出しの幅 68px）で接して 1 つの文字列に見える。
+     余白 0 で、1024px でも 5px、1100px で 12px、1280px で 27px のすき間が空く（実測） */
+  padding: 0;
   border-color: var(--line);
 }
 .timetable th.hour div {
