@@ -18,7 +18,7 @@ type Context = {
 }
 
 const MAX_DAYS_AHEAD = 90
-const MAX_LENGTH = 4 * 60
+export const MAX_LENGTH = 4 * 60
 
 /**
  * 送る前の検査。文は API（backend の ReservationRules）と同じ決まり・同じ言い方にしてある。

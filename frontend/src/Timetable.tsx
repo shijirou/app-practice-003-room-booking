@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Reservation, Room } from './api'
 import { CLOSE, OPEN, UNIT, earliestStart, formatMinutes, minutesOf } from './time'
+import { MAX_LENGTH } from './validate'
 
 type Props = {
   rooms: Room[]
@@ -25,8 +26,8 @@ type Props = {
   onFreeClick: (roomId: number, start: number, rect: DOMRect, byKeyboard?: boolean) => void
   /** 空き枠をドラッグ（または Shift + ← →）して、start〜end を選んで離した（Enter を押した）とき */
   onFreeDrag: (roomId: number, start: number, end: number, rect: DOMRect, byKeyboard?: boolean) => void
-  /** ドラッグが予約済みと重なったまま離したとき */
-  onDragBlocked: () => void
+  /** ドラッグが予約済みと重なったまま離したとき（overlap）、または 4 時間を超えたまま離したとき（long） */
+  onDragBlocked: (reason: 'overlap' | 'long', near?: DOMRect) => void
   /** 予約済みの枠を押したとき */
   onReservationClick: (reservation: Reservation, rect: DOMRect, byKeyboard?: boolean) => void
 }
@@ -54,6 +55,9 @@ type Nav = { from: number; to: number; id: number | null }
 const HOURS = Array.from({ length: (CLOSE - OPEN) / 60 }, (_, i) => OPEN + i * 60)
 // 縦線は 30 分ごと（OPEN と CLOSE の端は引かない）
 const LINES = Array.from({ length: (CLOSE - OPEN) / UNIT - 1 }, (_, i) => OPEN + (i + 1) * UNIT)
+/** 離したときに赤くなっているマス（お知らせをその近くに出すため）。重なりは予約枠、4 時間超えは超えた最初のマス */
+const redCellRect = (reason: 'overlap' | 'long') =>
+  document.querySelector(reason === 'overlap' ? '.timetable td.bad' : '.timetable td.over')?.getBoundingClientRect()
 const percent = (minutes: number) => ((minutes - OPEN) / (CLOSE - OPEN)) * 100
 
 /** 「会議室 × 時間」の表。予約済みの時間は、幅の分だけつながった 1 つのセルにする。 */
@@ -98,7 +102,8 @@ export default function Timetable({
       dragRef.current = null
       setDrag(null)
       const { onFreeClick, onFreeDrag, onDragBlocked } = latest.current
-      if (d.bad) return onDragBlocked()
+      if (d.bad) return onDragBlocked('overlap', redCellRect('overlap'))
+      if (d.hi - d.lo > MAX_LENGTH) return onDragBlocked('long', redCellRect('long'))
       // 動かして開始の枠に戻した（1 枠だけ）ときは取りやめ。30 分の予約は、押すだけでできる
       if (d.moved && d.hi - d.lo === UNIT) return
       const cell = document.querySelector(`td[data-room="${d.roomId}"][data-m="${d.lo}"]`)
@@ -230,7 +235,8 @@ export default function Timetable({
       const d = dragRef.current
       if (d?.keyboard) {
         update(null)
-        if (d.bad) return onDragBlocked()
+        if (d.bad) return onDragBlocked('overlap', redCellRect('overlap'))
+        if (d.hi - d.lo > MAX_LENGTH) return onDragBlocked('long', redCellRect('long'))
         const rect = (document.querySelector(`td[data-room="${d.roomId}"][data-m="${d.lo}"]`) ?? td).getBoundingClientRect()
         if (d.hi - d.lo === UNIT) onFreeClick(d.roomId, d.lo, rect, true)
         else onFreeDrag(d.roomId, d.lo, d.hi, rect, true)
@@ -324,7 +330,12 @@ export default function Timetable({
         const start = cursor
         const past = cursor + UNIT <= firstStart
         const selected = drag !== null && drag.roomId === roomId && start >= drag.lo && start < drag.hi
-        const classes = [past ? 'past' : 'free', cursor % 60 === 0 ? 'hr' : '', selected ? 'sel' : '']
+        // 4 時間を超えた分（動かしている側の端から）は赤くする
+        const over =
+          selected &&
+          drag !== null &&
+          (drag.lo === drag.anchor ? start >= drag.lo + MAX_LENGTH : start + UNIT <= drag.hi - MAX_LENGTH)
+        const classes = [past ? 'past' : 'free', cursor % 60 === 0 ? 'hr' : '', selected ? 'sel' : '', over ? 'over' : '']
           .filter(Boolean)
           .join(' ')
         cells.push(

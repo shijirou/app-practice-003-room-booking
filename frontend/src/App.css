@@ -507,6 +507,12 @@ header.top {
   border-color: var(--red);
   color: var(--red);
 }
+/* ドラッグで選んだ範囲のうち、4 時間を超えた分（重なった予約と同じ赤） */
+.timetable td.free.sel.over,
+.timetable td.free.sel.over:hover,
+.timetable tr.alt td.free.sel.over {
+  background: #e5484d;
+}
 .timetable td.past {
   background: var(--hatch);
 }
@@ -944,6 +950,15 @@ button.danger:hover {
 .note {
   color: var(--sub);
   font-size: 13px;
+}
+/* 赤くなったマスの近くに出すお知らせ（位置は style の left・top。マスの上に、上が狭ければ下に） */
+.toast.near {
+  bottom: auto;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+}
+.toast.near.below {
+  transform: translateX(-50%);
 }
 .toast {
   position: fixed;
