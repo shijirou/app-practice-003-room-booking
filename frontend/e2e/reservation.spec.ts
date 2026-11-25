@@ -75,7 +75,7 @@ test('予約 → 変更 → キャンセルを通しでできる', async ({ page
   await form.getByRole('button', { name: '予約する' }).click()
   await expect(page.getByText('予約しました')).toBeVisible()
   const mine = rowOf(page, '会議室A').getByTestId('reservation')
-  await expect(mine).toContainText('週次の打ち合わせ')
+  await expect(mine).toHaveAttribute('aria-label', /週次の打ち合わせ/) // 短い枠は名前だけの表示なので、用件は読み上げ名で確かめる
   await expect(mine).toHaveClass(/mine/)
 
   // 変更: 終了を 11:00 にのばす
@@ -181,7 +181,7 @@ test('キーボードだけで予約できる（［＋ 予約する］ボタン�
   await page.keyboard.type('キーボードで予約')
   await page.keyboard.press('Enter')
   await expect(page.getByText('予約しました')).toBeVisible()
-  await expect(page.locator('[data-testid="reservation"].mine')).toContainText('キーボードで予約')
+  await expect(page.locator('[data-testid="reservation"].mine')).toHaveAttribute('aria-label', /キーボードで予約/)
 })
 
 test('キーボードだけで予約できる（表の中を矢印キーで動く）', async ({ page }) => {
@@ -199,7 +199,7 @@ test('キーボードだけで予約できる（表の中を矢印キーで動�
   await page.keyboard.type('矢印キーで予約')
   await page.keyboard.press('Enter')
   await expect(page.getByText('予約しました')).toBeVisible()
-  await expect(rowOf(page, '会議室A').getByTestId('reservation')).toContainText('矢印キーで予約')
+  await expect(rowOf(page, '会議室A').getByTestId('reservation')).toHaveAttribute('aria-label', /矢印キーで予約/)
 })
 
 test('ミニカレンダーは、今日以外を選んで現在時刻の枠が伸びても、横に伸びない', async ({ page }) => {
