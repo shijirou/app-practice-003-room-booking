@@ -60,19 +60,44 @@ public class ReservationRules {
 		}
 	}
 
-	/** 用件を整える。前後の空白を除き、空なら null。50 文字を超えたら 400。 */
+	/**
+	 * 用件を整える。前後の見えない文字を除き、残りが空なら null（用件なし）。
+	 * 途中に改行・タブ（制御文字）があれば 400。50 文字（見えない文字を除いたあと）を超えても 400。
+	 * 画面（frontend の validate.ts の cleanPurpose）と、「見えない文字」の定義をそろえている。
+	 */
 	public String cleanPurpose(String purpose) {
 		if (purpose == null) {
 			return null;
 		}
-		var text = purpose.strip();
-		if (text.isEmpty()) {
+		var codePoints = purpose.codePoints().toArray();
+		var from = 0;
+		var to = codePoints.length;
+		while (from < to && isInvisible(codePoints[from])) {
+			from++;
+		}
+		while (to > from && isInvisible(codePoints[to - 1])) {
+			to--;
+		}
+		if (from == to) {
 			return null;
 		}
-		if (text.codePointCount(0, text.length()) > MAX_PURPOSE_LENGTH) {
+		var text = new String(codePoints, from, to - from);
+		if (text.codePoints().anyMatch(Character::isISOControl)) {
+			throw new BadRequestException("用件に改行やタブは使えません");
+		}
+		if (to - from > MAX_PURPOSE_LENGTH) {
 			throw new BadRequestException("用件は 50 文字までです");
 		}
 		return text;
+	}
+
+	/**
+	 * 見えない文字か。空白（改行・タブを含む）・スペース類（U+00A0・全角スペースなど）・書式文字（ゼロ幅スペース U+200B・BOM U+FEFF など）・制御文字。
+	 * Java の String.strip() は、ゼロ幅スペースなどの書式文字を取らないので、自分で判定する。
+	 */
+	private static boolean isInvisible(int codePoint) {
+		return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint)
+				|| Character.getType(codePoint) == Character.FORMAT || Character.isISOControl(codePoint);
 	}
 
 	/** 今日（日本時間）。 */

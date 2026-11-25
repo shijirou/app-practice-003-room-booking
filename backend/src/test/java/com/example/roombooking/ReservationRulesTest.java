@@ -56,6 +56,22 @@ class ReservationRulesTest {
 	}
 
 	@Test
+	void 見えない文字だけの用件は用件なし_前後の見えない文字は除く_途中の改行とタブは断る() {
+		// 見えない文字: ゼロ幅スペース U+200B・BOM U+FEFF・ノーブレークスペース U+00A0・改行・タブ
+		assertThat(rules.cleanPurpose("​")).isNull();
+		assertThat(rules.cleanPurpose("​﻿  \n\t")).isNull();
+		assertThat(rules.cleanPurpose("​定例﻿")).isEqualTo("定例");
+		assertThat(rules.cleanPurpose("\n定例\n")).isEqualTo("定例"); // 前後の改行は、空白と同じく除く
+		// 途中の改行・タブは断る
+		assertThatThrownBy(() -> rules.cleanPurpose("1行目\n2行目"))
+				.isInstanceOf(BadRequestException.class).hasMessage("用件に改行やタブは使えません");
+		assertThatThrownBy(() -> rules.cleanPurpose("a\tb")).isInstanceOf(BadRequestException.class);
+		assertThatThrownBy(() -> rules.cleanPurpose("a\r\nb")).isInstanceOf(BadRequestException.class);
+		// 文字数は、見えない文字を除いたあとで数える（50 文字ちょうどは通る）
+		assertThat(rules.cleanPurpose("​" + "a".repeat(50) + "​")).hasSize(50);
+	}
+
+	@Test
 	void 用件は空白を除き_空はnull_50文字まで() {
 		assertThat(rules.cleanPurpose(null)).isNull();
 		assertThat(rules.cleanPurpose("  　 ")).isNull();
