@@ -405,6 +405,20 @@ describe('App', () => {
     })
   })
 
+  it('閉店後（20:00 以降）に開くと翌日の表を出し、「今日」を押すと今日に戻れる。昼間は今日', async () => {
+    mockApi()
+    const night = () => new Date('2026-11-20T13:00:00Z') // 日本時間 22:00
+    const { unmount } = render(<App now={night} />)
+    expect(await screen.findByText('2026年11月21日（土）')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /＋ 予約する/ })).toBeEnabled() // 今日のままだと押せない
+    await userEvent.click(screen.getByRole('button', { name: '今日' }))
+    expect(screen.getByText('2026年11月20日（金）')).toBeInTheDocument()
+    unmount()
+
+    render(<App now={now} />) // 日本時間 09:00
+    expect(await screen.findByText('2026年11月20日（金）')).toBeInTheDocument()
+  })
+
   it('自分の予約のカードを押すと、その日にジャンプする', async () => {
     const calls = mockApi({
       upcoming: () =>
@@ -1233,8 +1247,9 @@ describe('App', () => {
 
     it('今日の受付が終わっているときと、過去の日では、押せない（理由が title に出る）', async () => {
       mockApi()
-      render(<App now={() => new Date('2026-11-20T11:30:00Z')} />) // 日本時間 20:30
+      render(<App now={() => new Date('2026-11-20T11:30:00Z')} />) // 日本時間 20:30（開くと翌日の表。「今日」で今日に戻る）
       const button = await screen.findByRole('button', { name: '＋ 予約する' })
+      await userEvent.click(screen.getByRole('button', { name: '今日' }))
       expect(button).toBeDisabled()
       expect(button).toHaveAttribute('title', '本日の受付は終了しました')
 
@@ -1245,8 +1260,9 @@ describe('App', () => {
 
     it('次の日に動かすと、その日の最初の空きで開く', async () => {
       mockApi()
-      render(<App now={() => new Date('2026-11-20T11:30:00Z')} />)
+      render(<App now={() => new Date('2026-11-20T11:30:00Z')} />) // 日本時間 20:30（開くと翌日の表）
       await screen.findByRole('button', { name: '＋ 予約する' })
+      await userEvent.click(screen.getByRole('button', { name: '今日' })) // 今日（受付終了）から、次の日へ
       await userEvent.click(screen.getByRole('button', { name: '次の日' }))
       const button = screen.getByRole('button', { name: '＋ 予約する' })
       await waitFor(() => expect(button).toBeEnabled())

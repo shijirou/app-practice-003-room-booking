@@ -17,7 +17,7 @@ import Lists from './Lists'
 import { placePopup, type Pos } from './placePopup'
 import { DetailPopup, ReservePopup } from './Popups'
 import Timetable from './Timetable'
-import { CLOSE, dateOf, earliestStart, formatMinutes, formatShortDate, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
+import { CLOSE, dateOf, earliestStart, formatMinutes, formatShortDate, initialDate, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
 import { errorMessage, useLoaded } from './useLoaded'
 import { defaultEnd, firstFreeSlot, validateForm, type Form } from './validate'
 
@@ -73,7 +73,8 @@ export default function App({ now = () => new Date() }: Props) {
   const today = todayInTokyo(current)
   const nowMinutes = minutesInTokyo(current)
 
-  const [date, setDate] = useState(today)
+  // 開いたとき、閉店後（今日はもう予約を始められない）なら、翌日の表を見せる。「今日」ボタンで今日に戻れる
+  const [date, setDate] = useState(() => initialDate(today, minutesInTokyo(current)))
   const [chosenId, setChosenId] = useState<number | null>(null)
   const [highlightId, setHighlightId] = useState<number | null>(null)
   const [flashId, setFlashId] = useState<number | null>(null)

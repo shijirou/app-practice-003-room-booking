@@ -7,7 +7,9 @@ type Employee = { id: number; name: string }
 type Room = { id: number; name: string }
 type Reservation = { id: number; employeeId: number }
 
-const tomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date(Date.now() + 24 * 60 * 60 * 1000))
+const dateInTokyo = (ms: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date(ms))
+const today = dateInTokyo(Date.now())
+const tomorrow = dateInTokyo(Date.now() + 24 * 60 * 60 * 1000)
 
 const iso = (hhmm: string) => `${tomorrow}T${hhmm}:00+09:00`
 
@@ -61,8 +63,11 @@ const answer = (page: Page, name: string) => page.getByRole('alertdialog').getBy
 const rowOf = (page: Page, room: string) =>
   page.locator('tr').filter({ has: page.locator('th.room', { hasText: room }) })
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ request, page }) => {
   await clearTomorrow(request)
+  // 画面の時計を、日本時間の今日の 10:00 に固定する。閉店後（20:00 以降）に実行すると、画面は翌日を既定で見せるため、
+  // 「開いて、次の日を押すと明日」の前提が、実行する時刻で変わってしまうのを防ぐ（API の時計は本物のまま）
+  await page.clock.install({ time: new Date(`${today}T10:00:00+09:00`) })
 })
 
 test('予約 → 変更 → キャンセルを通しでできる', async ({ page }) => {
@@ -235,4 +240,15 @@ test('ミニカレンダーは、今日以外を選んで現在時刻の枠が�
     expect(Math.abs(away.calRight - away.baseRight), step).toBeLessThan(2)
     expect(Math.abs(away.calWidth - onToday.calWidth), step).toBeLessThan(20)
   }
+})
+
+test('閉店後（20:00 以降）に開くと翌日の表が出て、「今日」で今日に戻れる', async ({ page }) => {
+  await page.clock.setSystemTime(new Date(`${today}T21:00:00+09:00`))
+  await page.goto('/')
+  const monthDay = (d: string) => `${Number(d.slice(5, 7))}月${Number(d.slice(8))}日`
+  await expect(page.getByRole('button', { name: new RegExp(monthDay(tomorrow)) })).toBeVisible()
+  await expect(page.getByRole('button', { name: '＋ 予約する' })).toBeEnabled() // 今日のままだと押せない
+
+  await page.getByRole('button', { name: '今日' }).click()
+  await expect(page.getByRole('button', { name: new RegExp(monthDay(today)) })).toBeVisible()
 })
