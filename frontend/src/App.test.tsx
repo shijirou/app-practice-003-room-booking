@@ -683,6 +683,47 @@ describe('App', () => {
       expect(busy).not.toHaveClass('bad')
     })
 
+    it('ドラッグが 4 時間を超えると、超えた分から赤くなり、離すとお知らせが出て小窓は開かない', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      fireEvent.mouseDown(freeCell('10:00'))
+      fireEvent.mouseMove(freeCell('13:30')) // 10:00〜14:00 ちょうど 4 時間
+      expect(document.querySelectorAll('.timetable td.over')).toHaveLength(0)
+      // 画面のない試験環境では枠の位置が取れないので、14:00 の枠が左 400・上 300・高さ 44 にあることにする
+      vi.spyOn(freeCell('14:00'), 'getBoundingClientRect').mockReturnValue({ left: 400, right: 430, width: 30, top: 300, bottom: 344 } as DOMRect)
+      fireEvent.mouseMove(freeCell('14:00')) // 10:00〜14:30 は 4 時間 30 分
+      expect(freeCell('13:30')).toHaveClass('sel')
+      expect(freeCell('13:30')).not.toHaveClass('over')
+      expect(freeCell('14:00')).toHaveClass('over')
+      fireEvent.mouseUp(document)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      const note = screen.getByText('1 件の予約は 4 時間までです')
+      expect(note).toBeInTheDocument()
+      // お知らせは画面の下ではなく、赤くなった最初のマスの真上（中心の x=415、マスの上端 300 の 8px 上）に出る
+      expect(note).toHaveClass('near')
+      expect(note).toHaveStyle({ left: '415px', top: '292px' })
+      expect(document.querySelectorAll('.timetable td.over')).toHaveLength(0)
+    })
+
+    it('左へドラッグして 4 時間を超えたときは、左の端（動かしている側）が赤くなる', async () => {
+      mockApi()
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      fireEvent.mouseDown(freeCell('15:00'))
+      fireEvent.mouseMove(freeCell('10:30')) // 10:30〜15:30 は 5 時間
+      expect(freeCell('10:30')).toHaveClass('over')
+      expect(freeCell('11:00')).toHaveClass('over')
+      expect(freeCell('11:30')).not.toHaveClass('over') // 11:30〜15:30 までが 4 時間
+      expect(freeCell('15:00')).not.toHaveClass('over')
+      fireEvent.mouseMove(freeCell('11:30')) // ちょうど 4 時間に戻す
+      expect(document.querySelectorAll('.timetable td.over')).toHaveLength(0)
+      fireEvent.mouseUp(document)
+      expect(screen.getByRole('dialog', { name: '予約' })).toBeInTheDocument()
+    })
+
     it('ほかの会議室や過去の枠の上を通っても、選ぶ範囲は変わらない', async () => {
       mockApi()
       render(<App now={now} />)
@@ -1011,6 +1052,18 @@ describe('App', () => {
       expect(within(dialog).getByLabelText('開始')).toHaveValue('540')
       expect(within(dialog).getByLabelText('終了')).toHaveValue('600') // 9:00〜10:00
       expect(document.querySelectorAll('.timetable td.sel')).toHaveLength(0)
+    })
+
+    it('Shift + → で 4 時間を超えると、超えた分が赤くなり、Enter では小窓は開かずお知らせが出る', async () => {
+      await setup()
+      focus(cell('9:00 空き', 1))
+      await userEvent.keyboard('{Shift>}{ArrowRight>7/}{/Shift}') // 9:00〜13:00 ちょうど 4 時間
+      expect(document.querySelectorAll('.timetable td.over')).toHaveLength(0)
+      await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}') // 13:00〜13:30 が 4 時間を超える
+      expect(document.querySelectorAll('.timetable td.over')).toHaveLength(1)
+      await userEvent.keyboard('{Enter}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(await screen.findByRole('status')).toHaveTextContent('1 件の予約は 4 時間までです')
     })
 
     it('範囲が予約済みと重なると赤くなり、Enter では小窓は開かずお知らせが出る。Esc で選択をやめられる', async () => {

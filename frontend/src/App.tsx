@@ -43,6 +43,18 @@ async function fetchUpcomingOf(employeeId: number | null) {
 const CLOCK_INTERVAL_MS = 30_000
 const FLASH_MS = 1500
 const TOAST_MS = 2500
+
+/** お知らせの見た目。赤くなったマスの位置（near）があれば、そのマスの上（上が狭ければ下）に出す。左右は画面の中に収める */
+function toastProps(toast: { near?: DOMRect }): { className: string; style?: React.CSSProperties } {
+  const near = toast.near
+  if (near === undefined) return { className: 'toast' }
+  const left = Math.min(Math.max(near.left + near.width / 2, 150), window.innerWidth - 150)
+  const below = near.top < 60
+  return {
+    className: below ? 'toast near below' : 'toast near',
+    style: { left, top: below ? near.bottom + 8 : near.top - 8 },
+  }
+}
 // 小窓のおおよその高さ（下にはみ出すときは上に出すための目安）
 const RESERVE_HEIGHT = 330
 const DETAIL_HEIGHT = 210
@@ -64,7 +76,8 @@ export default function App({ now = () => new Date() }: Props) {
   const [highlightId, setHighlightId] = useState<number | null>(null)
   const [flashId, setFlashId] = useState<number | null>(null)
   const [popup, setPopup] = useState<Popup | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  // near: 赤くなったマスの位置。あれば、画面の下ではなくその近くにお知らせを出す
+  const [toast, setToast] = useState<{ message: string; near?: DOMRect } | null>(null)
   // 時間のリストでカーソルを合わせている（決定前の）時刻。表の点線の青枠に、仮に反映する
   const [preview, setPreview] = useState<{ field: 'start' | 'end'; value: number } | null>(null)
   // 「もう一度読み込む」ボタンで増やして、読み込みをやり直す
@@ -94,8 +107,8 @@ export default function App({ now = () => new Date() }: Props) {
     flashTimer.current = setTimeout(() => setFlashId(null), FLASH_MS)
   }
 
-  const showToast = (message: string) => {
-    setToast(message)
+  const showToast = (message: string, near?: DOMRect) => {
+    setToast({ message, near })
     if (toastTimer.current !== null) clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(null), TOAST_MS)
   }
@@ -378,7 +391,9 @@ export default function App({ now = () => new Date() }: Props) {
               draft={draft}
               onFreeClick={openNew}
               onFreeDrag={openDrag}
-              onDragBlocked={() => showToast('その時間はすでに予約があります')}
+              onDragBlocked={(reason, near) =>
+                showToast(reason === 'long' ? '1 件の予約は 4 時間までです' : 'その時間はすでに予約があります', near)
+              }
               onReservationClick={openView}
             />
           )
@@ -439,9 +454,7 @@ export default function App({ now = () => new Date() }: Props) {
         />
       )}
 
-      {toast !== null && (
-        <output className="toast">{toast}</output>
-      )}
+      {toast !== null && <output {...toastProps(toast)}>{toast.message}</output>}
       {confirmDialog}
     </div>
   )
