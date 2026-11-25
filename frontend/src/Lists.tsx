@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Reservation, Room } from './api'
 import { dateOf, formatMinutes, formatShortDate, isFinished, isStarted, minutesOf } from './time'
 import type { Loaded } from './useLoaded'
@@ -60,6 +60,19 @@ export default function Lists(props: Props) {
     (a, b) => minutesOf(a.startAt) - minutesOf(b.startAt) || a.roomId - b.roomId,
   )
 
+  // 表の枠にカーソルを重ねたとき、強調されるカードが一覧の見える範囲の外なら、一覧だけを動かして見えるようにする。
+  // 見えているカードでは動かさない（カードにカーソルを重ねたときに、一覧が揺れない）。ページ全体は動かさない
+  const listRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const list = listRef.current
+    const card = list?.querySelector('.rcard.hl')
+    if (!list || !card) return
+    const box = list.getBoundingClientRect()
+    const rect = card.getBoundingClientRect()
+    if (rect.top < box.top) list.scrollTop -= box.top - rect.top
+    else if (rect.bottom > box.bottom) list.scrollTop += rect.bottom - box.bottom
+  }, [props.highlightId])
+
   return (
     <section className="card lists">
       <div className="tabs" role="tablist">
@@ -92,7 +105,7 @@ export default function Lists(props: Props) {
       </div>
 
       {tab === 'mine' && (
-        <div className="list" role="tabpanel" id="lists-panel" aria-labelledby="tab-mine">
+        <div className="list" ref={listRef} role="tabpanel" id="lists-panel" aria-labelledby="tab-mine">
           {upcoming.status === 'loading' && <div className="empty">読み込み中…</div>}
           {upcoming.status === 'error' && (
             <div className="err" role="alert">
@@ -156,7 +169,7 @@ export default function Lists(props: Props) {
       )}
 
       {tab === 'day' && (
-        <div className="list" role="tabpanel" id="lists-panel" aria-labelledby="tab-day">
+        <div className="list" ref={listRef} role="tabpanel" id="lists-panel" aria-labelledby="tab-day">
           {props.day.status === 'loading' && <div className="empty">読み込み中…</div>}
           {props.day.status === 'error' && <div className="empty">{props.day.message}</div>}
           {props.day.status === 'ok' && dayList.length === 0 && (

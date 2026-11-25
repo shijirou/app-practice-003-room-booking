@@ -429,6 +429,27 @@ describe('App', () => {
     expect(card).toHaveClass('hl')
   })
 
+  it('表の枠にカーソルを重ねたとき、カードが一覧の見える範囲の外なら一覧だけ動く。見えていれば動かない', async () => {
+    mockApi({ day: () => json([reservation({})]) })
+    render(<App now={now} />)
+    await userEvent.click(await screen.findByRole('tab', { name: /の予約（みんな）/ }))
+    const list = screen.getByRole('tabpanel')
+    const card = screen.getByText('会議室A ／ 営業定例（田中架空）').closest('.rcard') as HTMLElement
+    // 画面のない試験環境では位置が取れないので、一覧が上 100〜下 300 にあり、カードがその外（350〜400）にあることにする
+    vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({ top: 100, bottom: 300 } as DOMRect)
+    const cardRect = vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({ top: 350, bottom: 400 } as DOMRect)
+
+    await userEvent.hover(screen.getByText('営業定例（田中）'))
+    expect(list.scrollTop).toBe(100) // 下に 100 だけ動いて、カードの下端が一覧の下端に揃う
+
+    // カードが一覧の見える範囲の中なら、動かない
+    await userEvent.unhover(screen.getByText('営業定例（田中）'))
+    list.scrollTop = 0
+    cardRect.mockReturnValue({ top: 150, bottom: 200 } as DOMRect)
+    await userEvent.hover(screen.getByText('営業定例（田中）'))
+    expect(list.scrollTop).toBe(0)
+  })
+
   it('読み込みに失敗したらメッセージを出し、押すとやり直す', async () => {
     let fail = true
     mockApi({ day: () => (fail ? json({ message: 'エラーが起きました' }, 500) : json([])) })
