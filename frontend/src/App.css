@@ -195,16 +195,6 @@ header.top {
   top: -8px;
   height: 8px;
 }
-/* マスの高さはどの月も 30px（6 行の月に合わせる）。低いので、点は数字の右に並べる */
-.cal-grid.dense .day {
-  --row-h: 30px;
-  font-size: 16px;
-  gap: 6px;
-  padding: 0;
-}
-.cal-grid.dense .dots {
-  position: static;
-}
 .cal-head {
   display: flex;
   align-items: center;
@@ -268,13 +258,15 @@ header.top {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--row-h, 48px);
+  height: 30px; /* マスの高さはどの月も同じ（6 行の月に合わせる。6 行を大きくすると下のタブにかぶる） */
   border: 3px solid transparent; /* 今日の枠と同じ太さ。色は今日だけ青 */
   border-radius: 6px;
   background: none;
   background-clip: padding-box; /* 色の面は、この枠の内側だけ（今日の枠の太さの分、小さくなる） */
-  padding: 0 0 9px; /* 数字を少し上げて、下の点と重ならないようにする */
-  font-size: 18px;
+  /* 内側の高さは 24px。数字（16px）を上、点（7px）を下に置く。点があってもなくても、数字の位置は同じ */
+  padding: 0 0 7px;
+  font-size: 16px;
+  line-height: 1;
 }
 .day:hover:not(.sel),
 .day.today:hover {
@@ -308,7 +300,7 @@ header.top {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 3px;
+  bottom: 0;
   display: flex;
   justify-content: center;
   align-items: flex-end;

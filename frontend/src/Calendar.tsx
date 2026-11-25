@@ -108,7 +108,7 @@ export default function Calendar({
         </button>
       </div>
       <div
-        className="cal-grid dense"
+        className="cal-grid"
       >
         {WEEKDAYS.map((w, i) => (
           <div
