@@ -95,6 +95,11 @@ export function earliestStart(date: string, today: string, nowMinutes: number): 
   return 0
 }
 
+/** 開いたときに見せる日。今日がもう予約を始められない（閉店後）なら翌日。使える日を最初から見せるため。 */
+export function initialDate(today: string, nowMinutes: number): string {
+  return earliestStart(today, today, nowMinutes) >= CLOSE ? addDays(today, 1) : today
+}
+
 /** 予約が終わっているか。 */
 export function isFinished(date: string, endMinutes: number, today: string, nowMinutes: number): boolean {
   return date < today || (date === today && endMinutes <= nowMinutes)

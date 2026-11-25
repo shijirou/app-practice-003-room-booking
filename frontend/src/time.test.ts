@@ -4,6 +4,7 @@ import {
   calendarDays,
   dateOf,
   earliestStart,
+  initialDate,
   formatDateLabel,
   formatMinutes,
   formatShortDate,
@@ -50,6 +51,14 @@ describe('time', () => {
     expect(earliestStart('2026-11-20', '2026-11-20', 9 * 60)).toBe(9 * 60)
     expect(earliestStart('2026-11-21', '2026-11-20', 9 * 60)).toBe(0)
     expect(earliestStart('2026-11-19', '2026-11-20', 9 * 60)).toBe(Infinity)
+  })
+
+  it('開いたときに見せる日（閉店後は翌日。境界は、今日の最後の枠 19:30 を始められるかどうか）', () => {
+    expect(initialDate('2026-11-20', 8 * 60)).toBe('2026-11-20')
+    expect(initialDate('2026-11-20', 19 * 60 + 30)).toBe('2026-11-20') // 19:30 の枠はまだ始められる
+    expect(initialDate('2026-11-20', 19 * 60 + 31)).toBe('2026-11-21') // 切り上げて 20:00。もう始められない
+    expect(initialDate('2026-11-20', 20 * 60)).toBe('2026-11-21')
+    expect(initialDate('2026-11-30', 22 * 60)).toBe('2026-12-01') // 月をまたぐ
   })
 
   it('予約が終わっているか・始まっているか', () => {
