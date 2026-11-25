@@ -58,6 +58,9 @@ const LINES = Array.from({ length: (CLOSE - OPEN) / UNIT - 1 }, (_, i) => OPEN +
 /** 離したときに赤くなっているマス（お知らせをその近くに出すため）。重なりは予約枠、4 時間超えは超えた最初のマス */
 const redCellRect = (reason: 'overlap' | 'long') =>
   document.querySelector(reason === 'overlap' ? '.timetable td.bad' : '.timetable td.over')?.getBoundingClientRect()
+
+/** この長さ（分）以下の予約枠は、名前だけを表示する */
+const SHORT_MAX = 60
 const percent = (minutes: number) => ((minutes - OPEN) / (CLOSE - OPEN)) * 100
 
 /** 「会議室 × 時間」の表。予約済みの時間は、幅の分だけつながった 1 つのセルにする。 */
@@ -393,8 +396,12 @@ export default function Timetable({
       if (end <= start) continue
       addFree(start)
       const purpose = r.purpose ?? '（用件なし）'
+      const who = r.employeeName.replace('架空', '')
+      // 短い枠（30〜60 分）は幅が狭くて「用件（名前）」が切れるので、名前の最初の 2 文字だけを見せる。全文は title と予約の内容の小窓で見られる
+      const short = end - start <= SHORT_MAX
       const classes = [
         r.employeeId === selfId ? 'mine' : 'busy',
+        short ? 'short' : '',
         r.id === highlightId ? 'hl' : '',
         r.id === flashId ? 'flash' : '',
         drag !== null && drag.bad && drag.roomId === roomId && start < drag.badHi && end > drag.badLo ? 'bad' : '',
@@ -422,7 +429,7 @@ export default function Timetable({
           onMouseEnter={() => onHover(r.id)}
           onMouseLeave={() => onHover(null)}
         >
-          {purpose}（{r.employeeName.replace('架空', '')}）
+          {short ? Array.from(who).slice(0, 2).join('') : `${purpose}（${who}）`}
         </td>,
       )
       cursor = end

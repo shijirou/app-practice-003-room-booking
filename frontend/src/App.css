@@ -525,6 +525,10 @@ header.top {
   border-color: #fff;
   cursor: pointer;
 }
+/* 短い枠（30〜60 分）は名前だけ。幅が狭いので、左右の余白を減らして文字を入れる */
+.timetable td.short {
+  padding: 0 2px;
+}
 .timetable td.busy {
   background: var(--other);
   color: #2b3342;
