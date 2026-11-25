@@ -33,8 +33,9 @@
 ## API（Spring Boot）
 | 名前 | バージョン | 役割 |
 |---|---|---|
-| Spring Boot | 4.1.2 | API の土台（4.2.0 は RC のため使わない。前のアプリで確認した正式版） |
-| Gradle | 9.9.1 | ビルド（Gradle Wrapper で使う） |
+| Spring Boot | 4.2.0 | API の土台（Dependabot の更新で 4.1.2 から 4.2.0 に上がった。正式版。`build.gradle` と一致） |
+| Gradle | 9.9.2 | ビルド（Gradle Wrapper で使う。`gradle-wrapper.properties` と一致） |
+| SpotBugs（Gradle プラグイン） | 6.5.13 | 静的解析（バグになりやすい書き方を探す）。`./gradlew check` と CI で毎回動く。問題なしと判断したものは `backend/config/spotbugs/exclude.xml` に理由つきで書く |
 | Spring Web MVC / Data JPA / Validation | Spring Boot に合わせる | API の窓口・DB の読み書き・入力チェック |
 | Flyway | 12.4.0 | 表の作成・初期データ・排他制約を SQL で履歴管理（前のアプリの版。作成時に再確認） |
 | PostgreSQL JDBC ドライバー | 42.7.14 | Java から PostgreSQL につなぐ |

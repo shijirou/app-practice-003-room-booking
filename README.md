@@ -34,7 +34,7 @@ DB → API → 画面の順に 3 つ起動し、ブラウザで http://localhost
 2. `docker compose up -d` で起動する（停止は `docker compose down`）。
 
 ### API の起動（Spring Boot・ポート 8080）
-`backend/` で `./gradlew bootRun`（先に DB を起動しておく。起動すると Flyway が表とサンプルデータ（すべて架空）を作る）。テストは `./gradlew test`（Docker が必要）。
+`backend/` で `./gradlew bootRun`（先に DB を起動しておく。起動すると Flyway が表とサンプルデータ（すべて架空）を作る）。テストは `./gradlew test`、テスト + SpotBugs（静的解析）+ javac の警告は `./gradlew check`（どちらも Docker が必要。CI は `check`）。
 
 ### 画面の起動（React + Vite・ポート 5173）
 `frontend/` で初回だけ `npm ci`、そのあと `npm run dev`（API は 8080 に中継される）。
