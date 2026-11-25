@@ -960,6 +960,11 @@ button.danger:hover {
   bottom: auto;
   transform: translate(-50%, -100%);
   white-space: nowrap;
+  /* 断りの警告なので、小窓の警告文（.err）と同じ薄赤に赤文字。表の上に浮くので、細い赤い縁と影を足す */
+  background: #fdecea;
+  color: var(--red);
+  border: 1px solid #e8aaa5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 .toast.near.below {
   transform: translateX(-50%);
