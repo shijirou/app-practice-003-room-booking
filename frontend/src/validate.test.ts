@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Reservation } from './api'
 import { isoOf } from './time'
-import { defaultEnd, firstFreeSlot, selfOverlaps, validateForm, type Form } from './validate'
+import { cleanPurpose, defaultEnd, firstFreeSlot, selfOverlaps, validateForm, type Form } from './validate'
 
 const form = (over: Partial<Form> = {}): Form => ({
   roomId: 10,
@@ -22,7 +22,30 @@ const reservation = (roomId: number, start: string, end: string): Reservation =>
   purpose: null,
 })
 
+describe('cleanPurpose（API の ReservationRules.cleanPurpose と同じ定義）', () => {
+  it('前後の見えない文字（空白・改行・ゼロ幅スペース・BOM・ノーブレークスペース）を除く', () => {
+    expect(cleanPurpose('  定例 ')).toBe('定例')
+    expect(cleanPurpose('​定例﻿')).toBe('定例')
+    expect(cleanPurpose('\n\t定例 ')).toBe('定例')
+    expect(cleanPurpose('　定例　')).toBe('定例') // 全角スペース
+  })
+
+  it('見えない文字だけなら空になる（用件なし）。途中の文字は残す', () => {
+    expect(cleanPurpose('​')).toBe('')
+    expect(cleanPurpose('​﻿  \n\t')).toBe('')
+    expect(cleanPurpose('a b')).toBe('a b')
+    expect(cleanPurpose('a​b')).toBe('a​b') // 途中のゼロ幅スペースは、API も取らない
+  })
+})
+
 describe('validateForm（API と同じ決まり）', () => {
+  it('用件の途中に改行・タブがあると断る。前後の改行は除かれるので通る', () => {
+    expect(validateForm(form({ purpose: '1行目\n2行目' }), context)).toBe('用件に改行やタブは使えません')
+    expect(validateForm(form({ purpose: 'a\tb' }), context)).toBe('用件に改行やタブは使えません')
+    expect(validateForm(form({ purpose: '\n定例\n' }), context)).toBeNull()
+    expect(validateForm(form({ purpose: '​' }), context)).toBeNull() // 用件なしとして通る
+  })
+
   it('問題なければ null', () => {
     expect(validateForm(form(), context)).toBeNull()
   })

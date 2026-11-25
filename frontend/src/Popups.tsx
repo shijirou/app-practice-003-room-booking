@@ -6,7 +6,7 @@ import type { Pos } from './placePopup'
 import TimeSelect from './TimeSelect'
 import type { ConfirmRequest } from './ConfirmDialog'
 import { useDismiss } from './useDismiss'
-import { selfOverlaps, validateForm, type Form } from './validate'
+import { cleanPurpose, selfOverlaps, validateForm, type Form } from './validate'
 
 const options = (from: number, to: number) => {
   const list = []
@@ -74,7 +74,7 @@ export function ReservePopup({ form, rooms, pos, today, nowMinutes, existing, ed
       }
     }
     const roomName = rooms.find((room) => room.id === form.roomId)?.name ?? ''
-    const purpose = form.purpose.trim()
+    const purpose = cleanPurpose(form.purpose)
     return {
       title: 'この内容で予約を変更しますか？',
       lines: [

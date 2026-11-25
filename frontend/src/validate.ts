@@ -10,6 +10,15 @@ export type Form = {
   purpose: string
 }
 
+/**
+ * 用件の前後の「見えない文字」を除く。空白（改行・タブを含む）・スペース類（U+00A0 など）・
+ * 書式文字（ゼロ幅スペース U+200B・BOM U+FEFF など）・制御文字。除いて空なら「用件なし」として扱う。
+ * API（backend の ReservationRules.cleanPurpose）と同じ定義。JS の trim() は、ゼロ幅スペースを取らない。
+ */
+export function cleanPurpose(text: string): string {
+  return text.replace(/^[\s\p{Cf}\p{Zs}\p{Cc}]+|[\s\p{Cf}\p{Zs}\p{Cc}]+$/gu, '')
+}
+
 type Context = {
   today: string
   nowMinutes: number
@@ -26,6 +35,7 @@ export const MAX_LENGTH = 4 * 60
  */
 export function validateForm(form: Form, { today, nowMinutes, existing }: Context): string | null {
   if (!form.date) return '日付を選んでください'
+  if (/\p{Cc}/u.test(cleanPurpose(form.purpose))) return '用件に改行やタブは使えません'
   if (form.end <= form.start) return '終了は開始より後にしてください'
   if (form.start < OPEN || form.end > CLOSE) {
     return `予約できる時間は ${formatMinutes(OPEN)}〜${formatMinutes(CLOSE)} です`

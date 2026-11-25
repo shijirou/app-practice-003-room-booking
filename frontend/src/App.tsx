@@ -19,7 +19,7 @@ import { DetailPopup, ReservePopup } from './Popups'
 import Timetable from './Timetable'
 import { CLOSE, dateOf, earliestStart, formatMinutes, formatShortDate, isoOf, minutesInTokyo, minutesOf, todayInTokyo } from './time'
 import { errorMessage, useLoaded } from './useLoaded'
-import { defaultEnd, firstFreeSlot, validateForm, type Form } from './validate'
+import { cleanPurpose, defaultEnd, firstFreeSlot, validateForm, type Form } from './validate'
 
 type Props = {
   /** 今の日時を返す関数。テストで時刻を固定するために差し替えられる */
@@ -276,7 +276,7 @@ export default function App({ now = () => new Date() }: Props) {
 
   const create = async (form: Form) => {
     if (selfId === null) throw new ApiError('社員を選んでください')
-    const purpose = form.purpose.trim()
+    const purpose = cleanPurpose(form.purpose)
     const editId = popup?.kind === 'form' ? popup.editId : undefined
     const input = {
       employeeId: selfId,

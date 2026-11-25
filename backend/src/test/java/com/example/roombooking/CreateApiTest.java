@@ -100,6 +100,16 @@ class CreateApiTest {
 	}
 
 	@Test
+	void 見えない文字だけの用件は用件なしになり_改行を含む用件は400() throws Exception {
+		create(body(tanaka, roomA, at(tomorrow, "09:00:00"), at(tomorrow, "10:00:00"), "​"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.purpose").doesNotExist());
+		create(body(tanaka, roomB, at(tomorrow, "09:00:00"), at(tomorrow, "10:00:00"), "1行目\\n2行目")) // JSON の \n（改行）として送る
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("用件に改行やタブは使えません"));
+	}
+
+	@Test
 	void 読み取れない本文は原因に合わせた文で400になる() throws Exception {
 		create(body(tanaka, roomA, "あした", at(tomorrow, "10:00:00"), null))
 				.andExpect(status().isBadRequest())
