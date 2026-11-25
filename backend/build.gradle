@@ -1,6 +1,7 @@
 plugins {
 	id 'java'
 	id 'jacoco'
+	id 'com.github.spotbugs' version '6.5.13'
 	id 'org.springframework.boot' version '4.2.0'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -51,4 +52,28 @@ tasks.named('jacocoTestReport') {
 		xml.required = true   // CI が読んで、結果を表にする
 		html.required = true  // 人が見る用（build/reports/jacoco/test/html/index.html）
 	}
+}
+
+// 静的解析（コードを動かさずに、バグになりやすい書き方を探す）。`./gradlew check` で毎回動く。
+// 警告が増えたら、ビルドが失敗する。問題なしと判断したものは、除外の設定ファイルに理由つきで書く
+spotbugs {
+	excludeFilter = file('config/spotbugs/exclude.xml')
+}
+
+// 本体のコードだけを検査する（テストのコードは対象外）
+tasks.named('spotbugsTest') {
+	enabled = false
+}
+
+tasks.named('spotbugsMain') {
+	reports {
+		html {
+			required = true  // 人が見る用（build/reports/spotbugs/main.html）
+		}
+	}
+}
+
+// javac の警告をすべて有効にし、1 件でも出たらビルドを失敗させる（警告 0 を保つ）
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-Xlint:all', '-Werror']
 }

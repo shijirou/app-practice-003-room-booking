@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SpotBugs の除外。問題なしと判断したものだけを、理由つきで書く（docs/quality-review/05-overall-check.md）。
+     新しい指摘は、ここに足さずに、まずコードを直せないか考える。 -->
+<FindBugsFilter>
+  <!-- Employee.name・Room.name が「書かれていない」: JPA が DB から値を入れる（反射）ので、誤検知 -->
+  <Match>
+    <Class name="com.example.roombooking.Employee"/>
+    <Bug pattern="UWF_UNWRITTEN_FIELD"/>
+  </Match>
+  <Match>
+    <Class name="com.example.roombooking.Room"/>
+    <Bug pattern="UWF_UNWRITTEN_FIELD"/>
+  </Match>
+
+  <!-- Reservation.purpose が「読まれていない」: 予約の返事は、DB から直接 DTO を作る問い合わせで作る。
+       エンティティから読まないだけで、DB には保存される（作成・変更のテストで確認済み） -->
+  <Match>
+    <Class name="com.example.roombooking.Reservation"/>
+    <Bug pattern="URF_UNREAD_FIELD"/>
+  </Match>
+
+  <!-- DayReservations.employeeIds が中身を外に渡す: findDays で List.copyOf した、変更できない一覧を渡している。
+       この結果は JSON にするだけで、書き換えられない -->
+  <Match>
+    <Class name="com.example.roombooking.ReservationService$DayReservations"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+</FindBugsFilter>
