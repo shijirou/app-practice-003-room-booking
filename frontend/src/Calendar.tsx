@@ -40,13 +40,12 @@ export default function Calendar({
     setMonth(Number(date.slice(5, 7)));
   }
 
-  // 翌月の日だけの週（最終行）は出さない。行数が多い月は、マスを縮めて全体の高さをおさえる
+  // 翌月の日だけの週（最終行）は出さない。マスの高さはどの月も同じ（6 行の月に合わせる。6 行にすると下のタブにかぶるので、ほかの月を縮めた）
   const all = calendarDays(year, month);
   const weekCount = Array.from({ length: 6 }, (_, w) =>
     all.slice(w * 7, w * 7 + 7),
   ).filter((week) => week.some((d) => Number(d.slice(5, 7)) === month)).length;
   const cells = all.slice(0, weekCount * 7);
-  const rowHeight = weekCount <= 4 ? 40 : weekCount === 5 ? 36 : 30;
   const loaded = useLoaded(
     fetchReservationDays,
     `${cells[0]}~${cells[cells.length - 1]}`,
@@ -109,8 +108,7 @@ export default function Calendar({
         </button>
       </div>
       <div
-        className={`cal-grid${weekCount >= 6 ? " dense" : ""}`}
-        style={{ "--row-h": `${rowHeight}px` } as React.CSSProperties}
+        className="cal-grid dense"
       >
         {WEEKDAYS.map((w, i) => (
           <div
