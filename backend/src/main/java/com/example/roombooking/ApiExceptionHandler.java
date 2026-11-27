@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
@@ -90,6 +91,15 @@ public class ApiExceptionHandler {
 			}
 		}
 		return unexpected(e);
+	}
+
+	/**
+	 * 書き換え・削除しようとした行が、もう無かった（同じ予約の変更とキャンセルが同時に届き、キャンセルが先に終わった）。
+	 * 予約が見つからないのと同じなので、404 にする。
+	 */
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	ResponseEntity<Map<String, String>> alreadyGone(OptimisticLockingFailureException e) {
+		return body(HttpStatus.NOT_FOUND, "予約が見つかりません");
 	}
 
 	/**

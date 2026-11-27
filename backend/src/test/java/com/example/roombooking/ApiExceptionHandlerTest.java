@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.sql.SQLException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 
 /** DB の失敗を、画面に返す形（409 など）に直す部分を、DB なしで確かめる。 */
@@ -30,6 +31,14 @@ class ApiExceptionHandlerTest {
 
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 		assertThat(response.getBody()).containsEntry("message", "エラーが起きました");
+	}
+
+	@Test
+	void 書き換える前に消えていた予約は404にする() {
+		var response = handler.alreadyGone(new OptimisticLockingFailureException("row count 0"));
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+		assertThat(response.getBody()).containsEntry("message", "予約が見つかりません");
 	}
 
 	@Test

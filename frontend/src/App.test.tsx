@@ -101,6 +101,64 @@ describe('App', () => {
   beforeEach(() => vi.unstubAllGlobals())
   afterEach(() => vi.unstubAllGlobals())
 
+  const others = reservation({ id: 300, roomId: 11, employeeId: 2, employeeName: '佐藤架空', purpose: 'あとから' })
+
+  it('予約を断られたら、小窓を開いたまま表を読み直して、先に取った人の予約を出す', async () => {
+    let taken = false
+    mockApi({
+      day: () => json(taken ? [others] : []),
+      create: () => {
+        taken = true
+        return json({ message: 'その時間はすでに予約があります' }, 409)
+      },
+    })
+    render(<App now={now} />)
+    await screen.findByText('会議室A（4名）')
+
+    await userEvent.click(screen.getByRole('button', { name: '＋ 予約する' }))
+    const dialog = screen.getByRole('dialog', { name: '予約' })
+    await userEvent.click(within(dialog).getByRole('button', { name: '予約する' }))
+
+    expect(await screen.findByText('あとから（佐藤）')).toBeInTheDocument()
+    expect(within(dialog).getByText('その時間はすでに予約があります')).toBeInTheDocument()
+    expect(dialog).toBeInTheDocument()
+  })
+
+  it('画面に戻ると、表を消さずに読み直す。読み直しに失敗しても、出ている表は残る', async () => {
+    let response = () => json([])
+    const calls = mockApi({ day: () => response() })
+    render(<App now={now} />)
+    await screen.findByText('会議室A（4名）')
+
+    response = () => json([others])
+    act(() => void window.dispatchEvent(new Event('focus')))
+    expect(screen.queryByText('読み込み中…')).not.toBeInTheDocument()
+    expect(await screen.findByText('あとから（佐藤）')).toBeInTheDocument()
+
+    response = () => json({ message: '失敗' }, 500)
+    const before = calls.length
+    await act(async () => void window.dispatchEvent(new Event('focus')))
+    expect(calls.length).toBeGreaterThan(before)
+    expect(screen.getByText('あとから（佐藤）')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('開いたままでも、30 秒ごとに予約を読み直す', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      let list: object[] = []
+      mockApi({ day: () => json(list) })
+      render(<App now={now} />)
+      await screen.findByText('会議室A（4名）')
+
+      list = [others]
+      await act(() => vi.advanceTimersByTimeAsync(30_000))
+      expect(await screen.findByText('あとから（佐藤）')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('今日の予約を表に出す（自分は青・ほかの人はグレー・つながった 1 つのセル）', async () => {
     const calls = mockApi({
       day: () =>
