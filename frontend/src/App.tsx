@@ -62,11 +62,20 @@ const RESERVE_HEIGHT = 330
 const DETAIL_HEIGHT = 210
 
 export default function App({ now = () => new Date() }: Props) {
-  // 30 秒ごとに描き直して、現在時刻と「過去」の枠を新しくする
-  const [, setTick] = useState(0)
+  // 30 秒ごと、と画面に戻ったときに、現在時刻・「過去」の枠を描き直し、予約も裏で読み直す（ほかの人の予約を出すため）
+  const [refresh, setRefresh] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), CLOCK_INTERVAL_MS)
-    return () => clearInterval(id)
+    const update = () => {
+      if (!document.hidden) setRefresh((n) => n + 1)
+    }
+    const id = setInterval(update, CLOCK_INTERVAL_MS)
+    window.addEventListener('focus', update)
+    document.addEventListener('visibilitychange', update)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener('focus', update)
+      document.removeEventListener('visibilitychange', update)
+    }
   }, [])
 
   const current = now()
@@ -99,10 +108,10 @@ export default function App({ now = () => new Date() }: Props) {
   )
 
   const base = useLoaded(fetchBase, null, retry)
-  const reservations = useLoaded(fetchReservations, date, retry + reload)
+  const reservations = useLoaded(fetchReservations, date, retry + reload, refresh)
   // まだ選んでいなければ、先頭の社員
   const selfId = chosenId ?? (base.status === 'ok' ? (base.data.employees[0]?.id ?? null) : null)
-  const upcoming = useLoaded(fetchUpcomingOf, selfId, retry + reload)
+  const upcoming = useLoaded(fetchUpcomingOf, selfId, retry + reload, refresh)
 
   // 光る時間（FLASH_MS）は、その予約の枠が表に出てから数える。通信が遅いと、表に出る前に終わってしまうため。
   // 出ないままのときのために、上限（FLASH_GIVE_UP_MS）だけ置いておく
@@ -286,7 +295,14 @@ export default function App({ now = () => new Date() }: Props) {
       endAt: isoOf(form.date, form.end),
       purpose: purpose === '' ? null : purpose,
     }
-    const created = editId === undefined ? await createReservation(input) : await updateReservation(editId, input)
+    let created: Reservation
+    try {
+      created = editId === undefined ? await createReservation(input) : await updateReservation(editId, input)
+    } catch (err) {
+      // 断られたのは、表が古いからかもしれない（ほかの人が先に取ったなど）。小窓は開いたまま、裏で読み直す
+      setRefresh((n) => n + 1)
+      throw err
+    }
     setPopup(null)
     setDate(form.date)
     setReload((n) => n + 1)
