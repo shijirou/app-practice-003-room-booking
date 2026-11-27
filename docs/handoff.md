@@ -9,6 +9,8 @@
 
 ## 次回はここから
 0. 「マージしました」と言われたら、**番号ごとに、状態が MERGED のときだけ**片付ける: `S=$(gh pr view <番号> --json state --jq .state); [ "$S" = MERGED ] && git switch main && git pull && git branch -d <ブランチ>`
+1. **GitHub のユーザー名を変えた場合**（ユーザーが変更予定）: 先に接続を直す。`gh auth status` で名前を確かめ、必要なら `gh auth login`。手元の各リポジトリで `git remote set-url origin https://github.com/<新しい名前>/<リポジトリ名>.git`。
+- **コードの学習で分かったこと**（2026-11-27）: 言語はファイル名の終わりで分かる。`V1`・`V2` の `V` は目印で、順番は数字。会議室を増やすのは倉庫（新しい `V3` のファイル）。次の問いは「画面の（4名）の表示を変えるには、どこを直すか」。
 1. **コードに触れる学習**: `frontend/src/App.tsx` の見出しの 1 行を自分で書き換えて戻す。次に、予約 1 件が画面の `create` → `api.ts` → `ApiController` → `ReservationService` → DB まで通る道を読む。
 2. **説明の練習**: README の「概要」と反省点を、自分の言葉で話す。
 
